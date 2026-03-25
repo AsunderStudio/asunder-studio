@@ -108,6 +108,7 @@ export default function Home() {
       triggerBlast(mouseX, mouseY);
     };
     const onTouchMove = (e: TouchEvent) => {
+      e.preventDefault();
       const t = e.touches[0];
       prevMouseX = mouseX; prevMouseY = mouseY;
       mouseX = t.clientX; mouseY = t.clientY;
@@ -122,7 +123,7 @@ export default function Home() {
     document.addEventListener("mousedown", onMouseDown);
     document.addEventListener("mouseup", onMouseUp);
     document.addEventListener("touchstart", onTouchStart, { passive: true });
-    document.addEventListener("touchmove", onTouchMove, { passive: true });
+    document.addEventListener("touchmove", onTouchMove, { passive: false });
     document.addEventListener("touchend", onTouchEnd, { passive: true });
 
     let rafRing: number;
@@ -600,10 +601,18 @@ export default function Home() {
         const targetTY = nx * 18;
         const targetDX = nx * -14;
         const targetDY = ny * -14;
-        wordmarkTiltX += (targetTX - wordmarkTiltX) * 0.08;
-        wordmarkTiltY += (targetTY - wordmarkTiltY) * 0.08;
-        wordmarkDriftX += (targetDX - wordmarkDriftX) * 0.08;
-        wordmarkDriftY += (targetDY - wordmarkDriftY) * 0.08;
+        const lerpSpeed = active ? 0.08 : 0.18; // snap back faster when inactive
+        wordmarkTiltX += (targetTX - wordmarkTiltX) * lerpSpeed;
+        wordmarkTiltY += (targetTY - wordmarkTiltY) * lerpSpeed;
+        wordmarkDriftX += (targetDX - wordmarkDriftX) * lerpSpeed;
+        wordmarkDriftY += (targetDY - wordmarkDriftY) * lerpSpeed;
+        // Hard-zero near centre to prevent floating offset
+        if (!active) {
+          if (Math.abs(wordmarkTiltX) < 0.05) wordmarkTiltX = 0;
+          if (Math.abs(wordmarkTiltY) < 0.05) wordmarkTiltY = 0;
+          if (Math.abs(wordmarkDriftX) < 0.05) wordmarkDriftX = 0;
+          if (Math.abs(wordmarkDriftY) < 0.05) wordmarkDriftY = 0;
+        }
         wordmarkEl.style.transform = `perspective(700px) rotateX(${wordmarkTiltX}deg) rotateY(${wordmarkTiltY}deg) translate(${wordmarkDriftX}px, ${wordmarkDriftY}px)`;
       }
 
