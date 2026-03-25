@@ -106,7 +106,8 @@ export default function Home() {
       for (let i = 0; i < 512; i++) { perm[i] = p[i & 255]; permMod12[i] = perm[i] % 12; }
     }
     function noise2D(xin: number, yin: number) {
-      let n0, n1, n2;
+      // eslint-disable-next-line prefer-const
+      let n0: number, n1: number, n2: number;
       const s = (xin + yin) * F2, i = Math.floor(xin + s), j = Math.floor(yin + s), t = (i + j) * G2;
       const x0 = xin - (i - t), y0 = yin - (j - t);
       let i1, j1; if (x0 > y0) { i1 = 1; j1 = 0; } else { i1 = 0; j1 = 1; }
