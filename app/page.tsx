@@ -135,7 +135,7 @@ export default function Home() {
     }
     resize();
 
-    let FONT_SIZE: number, GRID_SPACING: number, DOT_MAX_RADIUS: number, DOT_MIN_RADIUS: number, NOISE_BASE: number, NOISE_AMP: number;
+    let FONT_SIZE: number, GRID_SPACING: number, DOT_MAX_RADIUS: number, NOISE_BASE: number, NOISE_AMP: number;
     let ZONE_A: number, ZONE_B: number, WARP_AMP: number;
     let IS_MOBILE = false;
 
@@ -148,7 +148,7 @@ export default function Home() {
         GRID_SPACING = Math.max(6, Math.min(10, Math.round(FONT_SIZE / 14)));
       }
       DOT_MAX_RADIUS = 1.6;
-      DOT_MIN_RADIUS = 0.2;
+
       NOISE_BASE = 0.7;
       NOISE_AMP = 0.9;
       ZONE_A = Math.round(FONT_SIZE * 0.09);
@@ -277,12 +277,6 @@ export default function Home() {
           }
         }
       }
-    }
-
-    function textAlphaAt(px: number, py: number) {
-      const ix = Math.round(px), iy = Math.round(py);
-      if (ix < 0 || ix >= textW || iy < 0 || iy >= textH) return 0;
-      return textMask![iy * textW + ix];
     }
 
     function textDistAt(px: number, py: number) {
