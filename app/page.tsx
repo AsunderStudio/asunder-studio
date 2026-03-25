@@ -7,9 +7,10 @@ export default function Home() {
     const cursorDot = document.getElementById("cursor-dot") as HTMLElement;
     const cursorRing = document.getElementById("cursor-ring") as HTMLElement;
     const descriptorEl = document.getElementById("studio-descriptor") as HTMLElement;
+    const wordmarkEl = document.getElementById("wordmark-img") as HTMLElement;
 
     // Build per-character descriptor
-    const DESCRIPTOR_TEXT = "A Creative Agency For The Agentic Era";
+    const DESCRIPTOR_TEXT = "A Creative Studio For The Agentic Era";
     const descriptorChars: { el: HTMLSpanElement; brightness: number }[] = [];
     for (let i = 0; i < DESCRIPTOR_TEXT.length; i++) {
       const span = document.createElement("span");
@@ -36,6 +37,7 @@ export default function Home() {
     let ringX = 0, ringY = 0;
     let isMouseDown = false;
     let isTouchDevice = false;
+    let wordmarkTiltX = 0, wordmarkTiltY = 0, wordmarkDriftX = 0, wordmarkDriftY = 0;
 
     const onMouseMove = (e: MouseEvent) => {
       if (isTouchDevice) return;
@@ -45,11 +47,51 @@ export default function Home() {
       cursorDot.style.left = mouseX + "px";
       cursorDot.style.top = mouseY + "px";
     };
+    function triggerBlast(bx: number, by: number) {
+      if (!springVX) return;
+      const BLAST_R = Math.min(W, H) * 0.55;
+      const BLAST_STR = 160;
+      for (let sj = 0; sj < springH; sj++) {
+        for (let si = 0; si < springW; si++) {
+          const wx = si * GRID_SPACING * SPRING_GRID;
+          const wy = sj * GRID_SPACING * SPRING_GRID;
+          const ddx = wx - bx, ddy = wy - by;
+          const dist = Math.sqrt(ddx * ddx + ddy * ddy);
+          if (dist < BLAST_R && dist > 0) {
+            const falloff = 1 - dist / BLAST_R;
+            // Sharp inner shockwave ring — peaks at ~15% radius then fades
+            const ring = Math.sin(falloff * Math.PI * 1.2) * falloff;
+            const f = ring * BLAST_STR;
+            const idx = sj * springW + si;
+            springVX[idx] += (ddx / dist) * f;
+            springVY[idx] += (ddy / dist) * f;
+          }
+        }
+      }
+      // Burst of fragments from impact point
+      for (let i = 0; i < 18; i++) {
+        const angle = (i / 18) * Math.PI * 2;
+        const speed = 3 + Math.random() * 5;
+        if (fragments.length < MAX_FRAGMENTS) {
+          fragments.push({
+            x: bx, y: by,
+            vx: Math.cos(angle) * speed,
+            vy: Math.sin(angle) * speed,
+            r: DOT_MAX_RADIUS * (0.5 + Math.random() * 0.8),
+            life: 1.0,
+            decay: 0.012 + Math.random() * 0.015,
+            isHot: true,
+          });
+        }
+      }
+    }
+
     const onMouseDown = () => {
       if (isTouchDevice) return;
       isMouseDown = true;
       cursorRing.style.width = "60px"; cursorRing.style.height = "60px";
       cursorRing.style.borderColor = "rgba(255,255,255,0.6)";
+      triggerBlast(mouseX, mouseY);
     };
     const onMouseUp = () => {
       if (isTouchDevice) return;
@@ -63,6 +105,7 @@ export default function Home() {
       const t = e.touches[0];
       prevMouseX = mouseX = t.clientX;
       prevMouseY = mouseY = t.clientY;
+      triggerBlast(mouseX, mouseY);
     };
     const onTouchMove = (e: TouchEvent) => {
       const t = e.touches[0];
@@ -120,6 +163,10 @@ export default function Home() {
       return 70 * (n0 + n1 + n2);
     }
 
+    // Preload logo
+    const logoImg = new Image();
+    logoImg.src = "/asunder-logo.png";
+
     // Canvas
     const canvas = document.getElementById("particle-canvas") as HTMLCanvasElement;
     const ctx = canvas.getContext("2d")!;
@@ -152,8 +199,8 @@ export default function Home() {
 
       NOISE_BASE = 0.7;
       NOISE_AMP = 0.9;
-      ZONE_A = Math.round(FONT_SIZE * 0.09);
-      ZONE_B = Math.round(FONT_SIZE * 0.2);
+      ZONE_A = Math.round(FONT_SIZE * 0.14);
+      ZONE_B = Math.round(FONT_SIZE * 0.45);
       WARP_AMP = GRID_SPACING * 1.6;
     }
 
@@ -164,55 +211,31 @@ export default function Home() {
     const CURSOR_RADIUS = 200;
     const CURSOR_WARP = 80;
     const CLICK_MULT = 2.5;
-    const FISSION_START = 800;
-    const FISSION_DURATION = 2000;
-    const FLARE_DURATION = 800;
+
     let startTime = 0;
     let gridCols = 0, gridRows = 0;
 
     let textMask: Uint8Array | null = null;
     let textDist: Float32Array | null = null;
     let textW = 0, textH = 0;
-    let textLeft = 0, textRight = 0;
 
     function buildTextMask() {
       const off = document.createElement("canvas");
       off.width = W; off.height = H;
       const octx = off.getContext("2d")!;
 
-      const STRETCH_X = 1.4;
-      const baseFontSize = FONT_SIZE * 0.88;
-      const spacing = baseFontSize * -0.04;
+      // Scale logo to fit viewport width with margins
+      const targetW = Math.min(W * 0.343, 396);
+      const scale = targetW / logoImg.naturalWidth;
+      const logoH = logoImg.naturalHeight * scale;
+      const lx = (W - targetW) / 2;
+      const ly = H / 2 - logoH / 2;
 
-      octx.fillStyle = "#fff";
-      octx.textBaseline = "middle";
-      octx.font = `900 ${baseFontSize}px "Nunito", "Arial Black", sans-serif`;
+      // Draw logo into mask canvas — alpha channel becomes the mask
+      octx.drawImage(logoImg, lx, ly, targetW, logoH);
 
-      const text = "ASUNDER";
-      let naturalW = 0;
-      for (let c = 0; c < text.length; c++) {
-        naturalW += octx.measureText(text[c]).width;
-        if (c < text.length - 1) naturalW += spacing;
-      }
-      const stretchedW = naturalW * STRETCH_X;
-
-      const cy = H / 2;
-      let cx = (W - stretchedW) / 2;
-      textLeft = cx;
-
-      for (let c = 0; c < text.length; c++) {
-        const charW = octx.measureText(text[c]).width;
-        const stretchedCharW = charW * STRETCH_X;
-        octx.save();
-        octx.translate(cx + stretchedCharW * 0.5, cy);
-        octx.scale(STRETCH_X, 1);
-        octx.fillText(text[c], -charW * 0.5, 0);
-        octx.restore();
-        cx += stretchedCharW + spacing * STRETCH_X;
-      }
-      textRight = cx - spacing * STRETCH_X;
-
-      const blurAmt = Math.max(2, Math.round(baseFontSize * 0.025));
+      // Mild blur+contrast to smooth aliasing edges into organic blobs
+      const blurAmt = Math.max(1, Math.round(logoH * 0.015));
       const blobCanvas = document.createElement("canvas");
       blobCanvas.width = W; blobCanvas.height = H;
       const bctx = blobCanvas.getContext("2d")!;
@@ -220,20 +243,11 @@ export default function Home() {
       bctx.drawImage(off, 0, 0);
       bctx.filter = "none";
       bctx.globalCompositeOperation = "source-over";
-      bctx.filter = `blur(${Math.round(blurAmt * 0.5)}px) contrast(3)`;
+      bctx.filter = `blur(${Math.round(blurAmt * 0.5)}px) contrast(4)`;
       bctx.drawImage(blobCanvas, 0, 0);
       bctx.filter = "none";
       bctx.globalCompositeOperation = "source-over";
 
-      octx.font = `900 ${baseFontSize}px "Nunito", "Arial Black", sans-serif`;
-      const metrics = octx.measureText(text);
-      const descent = (metrics as TextMetrics & { actualBoundingBoxDescent?: number }).actualBoundingBoxDescent || baseFontSize * 0.25;
-      const wordmarkBottom = cy + descent;
-
-      const descriptorGap = FONT_SIZE * 0.35;
-      const descriptorTop = wordmarkBottom + descriptorGap;
-      descriptorEl.style.setProperty("--descriptor-top", descriptorTop + "px");
-      descriptorEl.style.top = "var(--descriptor-top)";
 
       const imgData = bctx.getImageData(0, 0, W, H);
       const data = imgData.data;
@@ -288,18 +302,6 @@ export default function Home() {
 
     const MAX_FRAGMENTS = 200;
     const fragments: { x: number; y: number; vx: number; vy: number; r: number; life: number; decay: number; isHot: boolean }[] = [];
-
-    function spawnFragment(x: number, y: number, parentRadius: number) {
-      if (fragments.length >= MAX_FRAGMENTS) return;
-      const angle1 = Math.random() * Math.PI * 2;
-      const angle2 = angle1 + Math.PI * (0.6 + Math.random() * 0.8);
-      const speed = 1.5 + Math.random() * 2;
-      const r = parentRadius * 0.35;
-      fragments.push(
-        { x, y, vx: Math.cos(angle1) * speed, vy: Math.sin(angle1) * speed, r, life: 1.0, decay: 0.015 + Math.random() * 0.01, isHot: Math.random() < 0.4 },
-        { x, y, vx: Math.cos(angle2) * speed, vy: Math.sin(angle2) * speed, r, life: 1.0, decay: 0.015 + Math.random() * 0.01, isHot: Math.random() < 0.4 }
-      );
-    }
 
     function updateAndDrawFragments() {
       for (let i = fragments.length - 1; i >= 0; i--) {
@@ -387,8 +389,6 @@ export default function Home() {
       rafMain = requestAnimationFrame(animate);
     }
 
-    const fragmentSpawnTracker = new Set<number>();
-
     function animate(time: number) {
       rafMain = requestAnimationFrame(animate);
 
@@ -403,8 +403,6 @@ export default function Home() {
       const waveEaseOut = 1 - Math.pow(1 - waveT, 2.5);
       const waveFront = 1.3 - waveEaseOut * 1.6;
 
-      const fissionProgress = Math.max(0, Math.min(1, (elapsed - FISSION_START) / FISSION_DURATION));
-      const postFission = elapsed - FISSION_START;
       const warpMult = elapsed > 400 ? Math.min(1, (elapsed - 400) / 1500) : 0;
 
       const cursorR = isMouseDown ? CURSOR_RADIUS * 1.4 : CURSOR_RADIUS;
@@ -413,13 +411,12 @@ export default function Home() {
       const cDirX = cSpeed > 1 ? mouseVX / cSpeed : 0;
       const cDirY = cSpeed > 1 ? mouseVY / cSpeed : 0;
 
+
       updateSprings();
 
       const opT = time * 0.00015;
       const halfSpacing = GRID_SPACING * 0.5;
 
-      const breatheT = time * 0.0008;
-      const breatheGlobal = Math.sin(breatheT * 0.6) * 2.5 + Math.sin(breatheT * 0.37) * 1.8;
 
       const maxPass = IS_MOBILE ? 1 : 2;
       for (let pass = 0; pass < maxPass; pass++) {
@@ -436,7 +433,6 @@ export default function Home() {
               const d = textDistAt(baseX, baseY);
               if (d > ZONE_B || d < -ZONE_A) continue;
             }
-
             const nx = baseX * WARP_SCALE;
             const ny = baseY * WARP_SCALE;
             const warpAngle = noise2D(nx + t, ny + t * 0.7) * Math.PI * 2;
@@ -494,29 +490,18 @@ export default function Home() {
             if (finalX < -DOT_MAX_RADIUS || finalX > W + DOT_MAX_RADIUS ||
                 finalY < -DOT_MAX_RADIUS || finalY > H + DOT_MAX_RADIUS) continue;
 
-            const dist = textDistAt(finalX, finalY);
-            const distBase = textDistAt(baseX, baseY);
-            const rawDToEdge = Math.min(dist, distBase);
-
-            const breatheLocal = noise2D(baseX * 0.006 + breatheT * 0.25, baseY * 0.006 + breatheT * 0.15) * 3;
-            let cursorBreathe = 0;
-            if (cursorInfluence > 0) {
-              cursorBreathe = -cursorInfluence * cursorInfluence * 12;
-            }
-            const dToEdge = rawDToEdge + breatheGlobal + breatheLocal + cursorBreathe;
-
-            const crackX = textLeft + fissionProgress * (textRight - textLeft);
-            const inTextRegion = dToEdge < 0;
-            const dotReveal = inTextRegion ? Math.max(0, Math.min(1, (crackX - baseX) / 40)) : 0;
-            const dotCrackTime = (baseX - textLeft) / (textRight - textLeft) * FISSION_DURATION;
-            const timeSinceCrack = postFission - dotCrackTime;
+            // Organic moat: boundary distorts with noise
+            const logoD = textDistAt(finalX, finalY);
+            const moatNoise = (noise2D(baseX * 0.012 + t * 0.4, baseY * 0.012 + t * 0.25) + 1) * 0.5;
+            const dynamicMoat = 8.8 + moatNoise * 19.8;
+            if (logoD < dynamicMoat) continue;
 
             const snx = baseX * SIZE_SCALE, sny = baseY * SIZE_SCALE;
             const sizeNoise = (noise2D(snx + st + 200, sny + st * 0.6 + 200) + 1) * 0.5;
 
             let radius: number;
             if (isInterstitial) {
-              radius = 0.5;
+              radius = 0.7;
             } else {
               radius = NOISE_BASE + sizeNoise * NOISE_AMP;
               if (sizeNoise < 0.05) radius = 0.3;
@@ -542,61 +527,13 @@ export default function Home() {
               if (waveAlpha < 0.01) continue;
             }
 
-            let isTextEdge = false;
-            let isGhostDot = false;
+            if (radius < 0.15) continue;
 
-            if (fissionProgress > 0 && dToEdge < ZONE_B) {
-              if (dToEdge < 0) {
-                const depthInside = -dToEdge;
-                if (dotReveal > 0.8 && depthInside > ZONE_A) {
-                  radius *= 0.12;
-                  opacity = 0.06 + Math.sin(time * 0.002 + baseX * 0.1) * 0.03;
-                  isGhostDot = true;
-                  if (!isInterstitial) {
-                    const cellKey = col * 10000 + row;
-                    if (!fragmentSpawnTracker.has(cellKey)) {
-                      fragmentSpawnTracker.add(cellKey);
-                      if (Math.random() < 0.12) spawnFragment(finalX, finalY, DOT_MAX_RADIUS * sizeNoise);
-                    }
-                  }
-                } else if (dotReveal > 0) {
-                  if (depthInside < ZONE_A) {
-                    const zoneAT = depthInside / ZONE_A;
-                    radius = Math.min(radius, DOT_MAX_RADIUS * 0.18 * (1 - zoneAT * dotReveal));
-                    isTextEdge = true;
-                  } else {
-                    radius *= Math.max(0.05, 1 - dotReveal);
-                  }
-                }
-              } else {
-                isTextEdge = true;
-                if (dotReveal > 0.5) {
-                  const t2 = dToEdge / ZONE_B;
-                  const maxAllowed = DOT_MAX_RADIUS * (0.25 + t2 * 0.75);
-                  radius = Math.min(radius, maxAllowed);
-                }
-              }
-
-              if (isTextEdge && timeSinceCrack > 0 && timeSinceCrack < FLARE_DURATION) {
-                const flareT = timeSinceCrack / FLARE_DURATION;
-                const flare = Math.sin(flareT * Math.PI);
-                radius *= 1 + flare * 0.4;
-                opacity = Math.min(1, opacity + flare * 0.3);
-              }
-            }
-
-            if (radius < 0.15 && !isGhostDot) continue;
-
-            const nearEdge = isTextEdge && fissionProgress > 0.1 && dotReveal > 0.3;
-            const useAngular = nearEdge && !isInterstitial && ((col * 7 + row * 13) % 10 < 3);
+            const useAngular = false;
 
             let r, g, b;
-            if (isGhostDot) {
-              r = g = b = 120;
-            } else {
-              const bright = isTextEdge && dotReveal > 0.3
-                ? 0.92 + Math.random() * 0.08
-                : 0.72 + sizeNoise * 0.2;
+            {
+              const bright = 0.72 + sizeNoise * 0.2;
               r = g = b = Math.floor(bright * 255);
               if (cursorInfluence > 0.3) {
                 const boost = (cursorInfluence - 0.3) / 0.7;
@@ -653,11 +590,33 @@ export default function Home() {
 
       mouseVX *= 0.88;
       mouseVY *= 0.88;
+
+      // Wordmark tilt + drift
+      if (wordmarkEl) {
+        const active = mouseX > -100;
+        const nx = active ? (mouseX - W * 0.5) / (W * 0.5) : 0;
+        const ny = active ? (mouseY - H * 0.5) / (H * 0.5) : 0;
+        const targetTX = ny * -18;
+        const targetTY = nx * 18;
+        const targetDX = nx * -14;
+        const targetDY = ny * -14;
+        wordmarkTiltX += (targetTX - wordmarkTiltX) * 0.08;
+        wordmarkTiltY += (targetTY - wordmarkTiltY) * 0.08;
+        wordmarkDriftX += (targetDX - wordmarkDriftX) * 0.08;
+        wordmarkDriftY += (targetDY - wordmarkDriftY) * 0.08;
+        wordmarkEl.style.transform = `perspective(700px) rotateX(${wordmarkTiltX}deg) rotateY(${wordmarkTiltY}deg) translate(${wordmarkDriftX}px, ${wordmarkDriftY}px)`;
+      }
+
     }
+
+    const logoReady = new Promise<void>((resolve) => {
+      if (logoImg.complete && logoImg.naturalWidth > 0) resolve();
+      else { logoImg.onload = () => resolve(); logoImg.onerror = () => resolve(); }
+    });
 
     if (document.fonts && document.fonts.load) {
       Promise.all([
-        document.fonts.load('900 100px "Nunito"'),
+        logoReady,
         document.fonts.load('700 100px "Space Grotesk"'),
       ]).then(startAfterFont).catch(startAfterFont);
       setTimeout(startAfterFont, 2500);
@@ -665,9 +624,69 @@ export default function Home() {
       setTimeout(startAfterFont, 800);
     }
 
-    window.addEventListener("resize", fullInit);
+    const onResize = () => { fullInit(); if (typeof syncTickerPhase === 'function') syncTickerPhase(); };
+    window.addEventListener("resize", onResize);
+
+    // Ticker setup
+    const TICKER_PHRASE = 'Creation is destruction is ';
+    const GLITCH_CHARS = '01░▓╔╗╚╝║═#@!X+<>{}\\|/~^';
+    const TICKER_REPS = 12;
+
+    function buildTickerStrip(el: HTMLElement) {
+      const frag = document.createDocumentFragment();
+      const text = TICKER_PHRASE.repeat(TICKER_REPS);
+      for (const ch of text) {
+        const s = document.createElement('span');
+        s.className = 'tk-char';
+        s.dataset.o = ch;
+        s.textContent = ch;
+        frag.appendChild(s);
+      }
+      el.appendChild(frag);
+    }
+
+    const tkTopEl  = document.getElementById('tk-top')!;
+    const tkRtEl   = document.getElementById('tk-right')!;
+    const tkBotEl  = document.getElementById('tk-bot')!;
+    const tkLtEl   = document.getElementById('tk-left')!;
+    const tkEls = [tkTopEl, tkRtEl, tkBotEl, tkLtEl].filter(Boolean) as HTMLElement[];
+    tkEls.forEach(buildTickerStrip);
+
+    // Phase offsets so words flow as one continuous conveyor belt
+    const TK_DUR = 45; // must match CSS animation-duration
+    function syncTickerPhase() {
+      const contentW = tkTopEl?.offsetWidth || 1;
+      const S = 22;
+      const topLen = W - 2 * S;
+      const rightLen = H;
+      const botLen = topLen;
+      const speed = contentW * 0.5 / TK_DUR; // px/s
+      tkTopEl.style.animationDelay  = '0s';
+      tkRtEl.style.animationDelay   = `${-(topLen / speed)}s`;
+      tkBotEl.style.animationDelay  = `${-((topLen + rightLen) / speed)}s`;
+      tkLtEl.style.animationDelay   = `${-((topLen + rightLen + botLen) / speed)}s`;
+    }
+    setTimeout(syncTickerPhase, 0); // after layout
+
+    const allTkChars: HTMLSpanElement[] = [];
+    tkEls.forEach(el => el.querySelectorAll<HTMLSpanElement>('.tk-char').forEach(s => allTkChars.push(s)));
+
+    const glitchTicker = setInterval(() => {
+      const n = 6 + Math.floor(Math.random() * 8);
+      for (let i = 0; i < n; i++) {
+        const s = allTkChars[Math.floor(Math.random() * allTkChars.length)];
+        if (!s) continue;
+        const orig = s.dataset.o || '';
+        if (orig === ' ') continue;
+        const cls = Math.random() < 0.5 ? 'gf' : 'gh';
+        s.textContent = GLITCH_CHARS[Math.floor(Math.random() * GLITCH_CHARS.length)];
+        s.classList.add(cls);
+        setTimeout(() => { s.textContent = orig; s.classList.remove('gf'); s.classList.remove('gh'); }, 40 + Math.random() * 80);
+      }
+    }, 80);
 
     return () => {
+      clearInterval(glitchTicker);
       cancelAnimationFrame(rafRing);
       cancelAnimationFrame(rafMain);
       document.removeEventListener("mousemove", onMouseMove);
@@ -676,7 +695,7 @@ export default function Home() {
       document.removeEventListener("touchstart", onTouchStart);
       document.removeEventListener("touchmove", onTouchMove);
       document.removeEventListener("touchend", onTouchEnd);
-      window.removeEventListener("resize", fullInit);
+      window.removeEventListener("resize", onResize);
       descriptorEl.innerHTML = "";
     };
   }, []);
@@ -684,7 +703,26 @@ export default function Home() {
   return (
     <>
       <canvas id="particle-canvas" />
-      <div className="studio-descriptor" id="studio-descriptor" />
+      <div className="ticker-frame">
+        <div className="ticker-corner ticker-corner-tl" />
+        <div className="ticker-corner ticker-corner-tr" />
+        <div className="ticker-corner ticker-corner-bl" />
+        <div className="ticker-corner ticker-corner-br" />
+        <div className="ticker-edge ticker-top"><div id="tk-top" className="tk-scroll"></div></div>
+        <div className="ticker-edge ticker-right"><div id="tk-right" className="tk-scroll"></div></div>
+        <div className="ticker-edge ticker-bottom"><div id="tk-bot" className="tk-scroll"></div></div>
+        <div className="ticker-edge ticker-left"><div id="tk-left" className="tk-scroll"></div></div>
+      </div>
+      <div id="wordmark-wrap" className="wordmark-wrap">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          id="wordmark-img"
+          src="/asunder-logo.png"
+          alt="Asunder"
+          className="wordmark-img"
+        />
+        <div className="studio-descriptor" id="studio-descriptor" />
+      </div>
       <div className="bottom-bar">
         <span>Tear apart. Rebuild. Repeat.</span>
         <span className="contact">hello@asunder.studio</span>

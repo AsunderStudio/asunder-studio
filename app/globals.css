@@ -2,7 +2,7 @@
 @tailwind components;
 @tailwind utilities;
 
-@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=Nunito:wght@900&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=Space+Mono:wght@400;700&family=Nunito:wght@900&display=swap');
 
 * { margin: 0; padding: 0; box-sizing: border-box; }
 
@@ -21,20 +21,18 @@ canvas#particle-canvas {
 }
 
 .studio-descriptor {
-  position: fixed;
-  left: 50%;
-  transform: translateX(-50%);
-  top: var(--descriptor-top, 65%);
-  z-index: 4;
+  display: flex;
+  justify-content: center;
+  gap: 0;
+  margin-top: 10px;
   pointer-events: none;
-  font-size: clamp(0.7rem, 1.06vw, 0.9rem);
+  font-size: clamp(0.58rem, 0.87vw, 0.74rem);
+  font-family: 'Space Mono', monospace;
   font-weight: 400;
   letter-spacing: 0.18em;
   text-transform: uppercase;
   user-select: none;
   white-space: nowrap;
-  display: flex;
-  gap: 0;
 }
 
 .studio-descriptor .char {
@@ -52,6 +50,30 @@ canvas#particle-canvas {
     color: rgba(120, 120, 120, 1.0) !important;
     transition: none;
   }
+}
+
+.wordmark-wrap {
+  position: fixed;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 4;
+  pointer-events: none;
+  user-select: none;
+}
+
+.wordmark-img {
+  display: block;
+  width: clamp(88px, 34.3vw, 396px);
+  height: auto;
+  opacity: 0;
+  animation: wordmarkReveal 2.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  animation-delay: 1.6s;
+}
+
+@keyframes wordmarkReveal {
+  0% { opacity: 0; }
+  100% { opacity: 1; }
 }
 
 .cursor-dot {
@@ -113,6 +135,56 @@ canvas#particle-canvas {
   0% { color: rgba(255, 255, 255, 0.0); }
   100% { color: rgba(74, 74, 74, 1.0); }
 }
+
+/* ── Ticker frame ── */
+.ticker-frame { position: fixed; inset: 0; z-index: 5; pointer-events: none; }
+
+.ticker-edge { position: absolute; overflow: hidden; background: rgba(10,10,10,0.88); }
+.ticker-top    { top: 0;    left: 22px; width: calc(100% - 44px); height: 22px; display: flex; align-items: center; border-bottom: 1px solid rgba(255,255,255,0.07); }
+.ticker-bottom { bottom: 0; left: 22px; width: calc(100% - 44px); height: 22px; display: flex; align-items: center; border-top: 1px solid rgba(255,255,255,0.07); }
+.ticker-right  { top: 0; right: 0; width: 22px; height: 100vh; border-left: 1px solid rgba(255,255,255,0.07); }
+.ticker-left   { top: 0; left: 0;  width: 22px; height: 100vh; border-right: 1px solid rgba(255,255,255,0.07); }
+
+.ticker-corner {
+  position: absolute;
+  width: 22px; height: 22px;
+  background: rgba(10,10,10,0.88);
+  z-index: 2;
+}
+.ticker-corner-tl { top: 0;    left: 0;  border-right: 1px solid rgba(255,255,255,0.07); border-bottom: 1px solid rgba(255,255,255,0.07); }
+.ticker-corner-tr { top: 0;    right: 0; border-left:  1px solid rgba(255,255,255,0.07); border-bottom: 1px solid rgba(255,255,255,0.07); }
+.ticker-corner-bl { bottom: 0; left: 0;  border-right: 1px solid rgba(255,255,255,0.07); border-top:    1px solid rgba(255,255,255,0.07); }
+.ticker-corner-br { bottom: 0; right: 0; border-left:  1px solid rgba(255,255,255,0.07); border-top:    1px solid rgba(255,255,255,0.07); }
+
+.tk-scroll {
+  display: inline-block;
+  white-space: nowrap;
+  font-family: 'Space Mono', monospace;
+  font-size: 10px;
+  letter-spacing: 0.14em;
+  color: rgba(255, 255, 255, 1);
+  text-transform: uppercase;
+  will-change: transform;
+}
+.ticker-top    .tk-scroll { animation: tk-top 45s linear infinite; }
+.ticker-bottom .tk-scroll { animation: tk-bot 45s linear infinite; }
+.ticker-right  .tk-scroll { position: absolute; top: 50%; left: 50%; animation: tk-rt 45s linear infinite; }
+.ticker-left   .tk-scroll { position: absolute; top: 50%; left: 50%; animation: tk-lt 45s linear infinite; }
+
+@keyframes tk-top { from { transform: translateX(-50%); } to { transform: translateX(0); } }
+@keyframes tk-bot { from { transform: translateX(0); }   to { transform: translateX(-50%); } }
+@keyframes tk-rt {
+  from { transform: translate(-50%,-50%) rotate(90deg)  translateX(0); }
+  to   { transform: translate(-50%,-50%) rotate(90deg)  translateX(50%); }
+}
+@keyframes tk-lt {
+  from { transform: translate(-50%,-50%) rotate(-90deg) translateX(0); }
+  to   { transform: translate(-50%,-50%) rotate(-90deg) translateX(50%); }
+}
+
+.tk-char { display: inline; }
+.tk-char.gf { display: inline-block; transform: scaleY(-1); color: rgba(255,255,255,1); }
+.tk-char.gh { display: inline-block; transform: scaleX(-1); color: rgba(255,255,255,1); }
 
 @media (max-width: 768px) {
   body { cursor: auto; }
