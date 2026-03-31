@@ -7,7 +7,6 @@ export default function Home() {
     const cursorDot = document.getElementById("cursor-dot") as HTMLElement;
     const cursorRing = document.getElementById("cursor-ring") as HTMLElement;
     const descriptorEl = document.getElementById("studio-descriptor") as HTMLElement;
-    const wordmarkEl = document.getElementById("wordmark-img") as HTMLElement;
 
     // Build per-character descriptor
     const DESCRIPTOR_TEXT = "A Creative Studio For The Agentic Era";
@@ -37,7 +36,6 @@ export default function Home() {
     let ringX = 0, ringY = 0;
     let isMouseDown = false;
     let isTouchDevice = false;
-    let wordmarkTiltX = 0, wordmarkTiltY = 0, wordmarkDriftX = 0, wordmarkDriftY = 0;
 
     const onMouseMove = (e: MouseEvent) => {
       if (isTouchDevice) return;
@@ -47,51 +45,11 @@ export default function Home() {
       cursorDot.style.left = mouseX + "px";
       cursorDot.style.top = mouseY + "px";
     };
-    function triggerBlast(bx: number, by: number) {
-      if (!springVX) return;
-      const BLAST_R = Math.min(W, H) * 0.55;
-      const BLAST_STR = 160;
-      for (let sj = 0; sj < springH; sj++) {
-        for (let si = 0; si < springW; si++) {
-          const wx = si * GRID_SPACING * SPRING_GRID;
-          const wy = sj * GRID_SPACING * SPRING_GRID;
-          const ddx = wx - bx, ddy = wy - by;
-          const dist = Math.sqrt(ddx * ddx + ddy * ddy);
-          if (dist < BLAST_R && dist > 0) {
-            const falloff = 1 - dist / BLAST_R;
-            // Sharp inner shockwave ring — peaks at ~15% radius then fades
-            const ring = Math.sin(falloff * Math.PI * 1.2) * falloff;
-            const f = ring * BLAST_STR;
-            const idx = sj * springW + si;
-            springVX[idx] += (ddx / dist) * f;
-            springVY[idx] += (ddy / dist) * f;
-          }
-        }
-      }
-      // Burst of fragments from impact point
-      for (let i = 0; i < 18; i++) {
-        const angle = (i / 18) * Math.PI * 2;
-        const speed = 3 + Math.random() * 5;
-        if (fragments.length < MAX_FRAGMENTS) {
-          fragments.push({
-            x: bx, y: by,
-            vx: Math.cos(angle) * speed,
-            vy: Math.sin(angle) * speed,
-            r: DOT_MAX_RADIUS * (0.5 + Math.random() * 0.8),
-            life: 1.0,
-            decay: 0.012 + Math.random() * 0.015,
-            isHot: true,
-          });
-        }
-      }
-    }
-
     const onMouseDown = () => {
       if (isTouchDevice) return;
       isMouseDown = true;
       cursorRing.style.width = "60px"; cursorRing.style.height = "60px";
       cursorRing.style.borderColor = "rgba(255,255,255,0.6)";
-      triggerBlast(mouseX, mouseY);
     };
     const onMouseUp = () => {
       if (isTouchDevice) return;
@@ -105,7 +63,6 @@ export default function Home() {
       const t = e.touches[0];
       prevMouseX = mouseX = t.clientX;
       prevMouseY = mouseY = t.clientY;
-      triggerBlast(mouseX, mouseY);
     };
     const onTouchMove = (e: TouchEvent) => {
       e.preventDefault();
@@ -184,6 +141,35 @@ export default function Home() {
     }
     resize();
 
+    // ── Animation modes ──
+    const MODES = [
+      { // Flow – the original organic drift
+        warpScale: 0.003, warpSpeed: 0.00025, warpAmpMult: 1.6,
+        sizeScale: 0.004, sizeSpeed: 0.0002,
+        noiseBase: 0.7, noiseAmp: 0.9,
+        cursorRadius: 200, cursorWarp: 80, clickMult: 2.5,
+        tint: [0.78, 0.88, 1] as [number, number, number], // cool blue
+        waveDir: "left", // reveal left→right
+      },
+      { // Ember – slow, warm drift
+        warpScale: 0.002, warpSpeed: 0.00015, warpAmpMult: 2.2,
+        sizeScale: 0.004, sizeSpeed: 0.0002,
+        noiseBase: 0.7, noiseAmp: 0.9,
+        cursorRadius: 260, cursorWarp: 60, clickMult: 2.0,
+        tint: [0.78, 0.88, 1] as [number, number, number], // cool blue
+        waveDir: "center", // reveal from centre outward
+      },
+      { // Storm – tight, fast, electric
+        warpScale: 0.005, warpSpeed: 0.0005, warpAmpMult: 1.2,
+        sizeScale: 0.004, sizeSpeed: 0.0002,
+        noiseBase: 0.7, noiseAmp: 0.9,
+        cursorRadius: 170, cursorWarp: 110, clickMult: 3.0,
+        tint: [0.78, 0.88, 1] as [number, number, number], // cool blue
+        waveDir: "top", // reveal top→bottom
+      },
+    ];
+    const MODE = MODES[Math.floor(Math.random() * MODES.length)];
+
     let FONT_SIZE: number, GRID_SPACING: number, DOT_MAX_RADIUS: number, NOISE_BASE: number, NOISE_AMP: number;
     let ZONE_A: number, ZONE_B: number, WARP_AMP: number;
     let IS_MOBILE = false;
@@ -198,20 +184,20 @@ export default function Home() {
       }
       DOT_MAX_RADIUS = 1.6;
 
-      NOISE_BASE = 0.7;
-      NOISE_AMP = 0.9;
+      NOISE_BASE = MODE.noiseBase;
+      NOISE_AMP = MODE.noiseAmp;
       ZONE_A = Math.round(FONT_SIZE * 0.14);
       ZONE_B = Math.round(FONT_SIZE * 0.45);
-      WARP_AMP = GRID_SPACING * 1.6;
+      WARP_AMP = GRID_SPACING * MODE.warpAmpMult;
     }
 
-    const WARP_SCALE = 0.003;
-    const WARP_SPEED = 0.00025;
-    const SIZE_SCALE = 0.004;
-    const SIZE_SPEED = 0.0002;
-    const CURSOR_RADIUS = 200;
-    const CURSOR_WARP = 80;
-    const CLICK_MULT = 2.5;
+    const WARP_SCALE = MODE.warpScale;
+    const WARP_SPEED = MODE.warpSpeed;
+    const SIZE_SCALE = MODE.sizeScale;
+    const SIZE_SPEED = MODE.sizeSpeed;
+    const CURSOR_RADIUS = MODE.cursorRadius;
+    const CURSOR_WARP = MODE.cursorWarp;
+    const CLICK_MULT = MODE.clickMult;
 
     let startTime = 0;
     let gridCols = 0, gridRows = 0;
@@ -299,28 +285,6 @@ export default function Home() {
       const ix = Math.round(px), iy = Math.round(py);
       if (ix < 0 || ix >= textW || iy < 0 || iy >= textH) return 999;
       return textDist![iy * textW + ix];
-    }
-
-    const MAX_FRAGMENTS = 200;
-    const fragments: { x: number; y: number; vx: number; vy: number; r: number; life: number; decay: number; isHot: boolean }[] = [];
-
-    function updateAndDrawFragments() {
-      for (let i = fragments.length - 1; i >= 0; i--) {
-        const f = fragments[i];
-        f.x += f.vx; f.y += f.vy;
-        f.vx *= 0.97; f.vy *= 0.97;
-        f.life -= f.decay;
-        if (f.life <= 0) { fragments.splice(i, 1); continue; }
-        const alpha = f.life;
-        const v = Math.floor(220 * alpha);
-        ctx.fillStyle = `rgba(${v},${v},${v},${alpha})`;
-        ctx.save();
-        ctx.translate(f.x, f.y);
-        ctx.rotate(Math.atan2(f.vy, f.vx));
-        const s = f.r * f.life;
-        ctx.fillRect(-s, -s * 0.4, s * 2, s * 0.8);
-        ctx.restore();
-      }
     }
 
     const SPRING_GRID = 5;
@@ -418,7 +382,6 @@ export default function Home() {
       const opT = time * 0.00015;
       const halfSpacing = GRID_SPACING * 0.5;
 
-
       const maxPass = IS_MOBILE ? 1 : 2;
       for (let pass = 0; pass < maxPass; pass++) {
         const isInterstitial = pass === 1;
@@ -475,10 +438,8 @@ export default function Home() {
               cfy += ndy * f3 * cursorW * 0.08;
 
               if (isMouseDown) {
-                cfx += ndx * f2 * cursorW * 0.6;
-                cfy += ndy * f2 * cursorW * 0.6;
-                cfx += tangX * eyeWall * cursorW * 0.4;
-                cfy += tangY * eyeWall * cursorW * 0.4;
+                cfx += ndx * f2 * cursorW * 0.8;
+                cfy += ndy * f2 * cursorW * 0.8;
               }
 
               dx += cfx; dy += cfy;
@@ -490,6 +451,19 @@ export default function Home() {
 
             if (finalX < -DOT_MAX_RADIUS || finalX > W + DOT_MAX_RADIUS ||
                 finalY < -DOT_MAX_RADIUS || finalY > H + DOT_MAX_RADIUS) continue;
+
+            // Radiation decay on click
+            if (isMouseDown && cursorInfluence > 0.05) {
+              const distNorm = 1 - cursorInfluence;
+              const seed = (col * 7919 + row * 104729) >>> 0;
+              const r1 = (seed & 0xffff) / 0xffff;
+              const r2 = ((seed >> 8) & 0xffff) / 0xffff;
+              const n1 = noise2D(baseX * 0.04 + time * 0.008, baseY * 0.04 + r1 * 50);
+              const n2 = noise2D(baseX * 0.1 + time * 0.015 + 300, baseY * 0.1 + r2 * 80);
+              const flicker = n1 * 0.6 + n2 * 0.4;
+              const killChance = cursorInfluence * 0.9;
+              if (flicker < killChance * 2 - 1 + distNorm * 0.7) continue;
+            }
 
             // Organic moat: boundary distorts with noise
             const logoD = textDistAt(finalX, finalY);
@@ -519,9 +493,20 @@ export default function Home() {
             let opacity = 0.5 + opNoise * 0.5;
 
             if (elapsed < WAVE_DURATION + 600) {
-              const dotNormX = baseX / W;
-              const waveNoise = noise2D(baseY * 0.006, 42) * 0.06;
-              const distPastWave = (dotNormX + waveNoise) - waveFront;
+              let dotNorm: number, waveNoise: number;
+              if (MODE.waveDir === "top") {
+                dotNorm = baseY / H;
+                waveNoise = noise2D(baseX * 0.006, 42) * 0.06;
+              } else if (MODE.waveDir === "center") {
+                const cx = (baseX - W * 0.5) / (W * 0.5);
+                const cy = (baseY - H * 0.5) / (H * 0.5);
+                dotNorm = Math.sqrt(cx * cx + cy * cy);
+                waveNoise = noise2D(baseX * 0.004 + baseY * 0.004, 42) * 0.06;
+              } else {
+                dotNorm = baseX / W;
+                waveNoise = noise2D(baseY * 0.006, 42) * 0.06;
+              }
+              const distPastWave = (dotNorm + waveNoise) - waveFront;
               const waveAlpha = Math.max(0, Math.min(1, distPastWave / WAVE_FEATHER));
               opacity *= waveAlpha;
               radius *= 0.4 + waveAlpha * 0.6;
@@ -530,37 +515,118 @@ export default function Home() {
 
             if (radius < 0.15) continue;
 
-            const useAngular = false;
-
             let r, g, b;
             {
               const bright = 0.72 + sizeNoise * 0.2;
-              r = g = b = Math.floor(bright * 255);
+              r = Math.floor(bright * 255 * MODE.tint[0]);
+              g = Math.floor(bright * 255 * MODE.tint[1]);
+              b = Math.floor(bright * 255 * MODE.tint[2]);
               if (cursorInfluence > 0.3) {
                 const boost = (cursorInfluence - 0.3) / 0.7;
-                r = g = b = Math.min(255, Math.floor(r + boost * 40));
+                r = Math.min(255, Math.floor(r + boost * 40));
+                g = Math.min(255, Math.floor(g + boost * 40));
+                b = Math.min(255, Math.floor(b + boost * 40));
               }
             }
 
             ctx.fillStyle = `rgba(${r},${g},${b},${opacity})`;
-
-            if (useAngular) {
-              ctx.save();
-              ctx.translate(finalX, finalY);
-              ctx.rotate(noise2D(baseX * 0.01, baseY * 0.01) * Math.PI);
-              const s = radius;
-              ctx.fillRect(-s, -s * 0.35, s * 2, s * 0.7);
-              ctx.restore();
-            } else {
-              ctx.beginPath();
-              ctx.arc(finalX, finalY, radius, 0, Math.PI * 2);
-              ctx.fill();
-            }
+            ctx.beginPath();
+            ctx.arc(finalX, finalY, Math.max(0.1, radius), 0, Math.PI * 2);
+            ctx.fill();
           }
         }
       }
 
-      updateAndDrawFragments();
+      // ── Logo interior: dense dot fill ──
+      const LOGO_SPACING = IS_MOBILE ? 4 : 3;
+      const logoCols = Math.ceil(W / LOGO_SPACING);
+      const logoRows = Math.ceil(H / LOGO_SPACING);
+      for (let row = 0; row < logoRows; row++) {
+        for (let col = 0; col < logoCols; col++) {
+          const bx = col * LOGO_SPACING;
+          const by = row * LOGO_SPACING;
+
+          // Only draw inside the logo mask
+          const ix = Math.round(bx), iy = Math.round(by);
+          if (ix < 0 || ix >= textW || iy < 0 || iy >= textH) continue;
+          if (textMask![iy * textW + ix] < 120) continue;
+
+          // Slight noise warp so it breathes
+          const lnx = bx * 0.008, lny = by * 0.008;
+          const lwarp = noise2D(lnx + t * 0.5, lny + t * 0.3) * LOGO_SPACING * 0.6;
+          const lwarpY = noise2D(lnx + 100 + t * 0.4, lny + 100 + t * 0.25) * LOGO_SPACING * 0.6;
+          const fx = bx + lwarp;
+          const fy = by + lwarpY;
+
+          // Skip if warped outside logo
+          const fix = Math.round(fx), fiy = Math.round(fy);
+          if (fix < 0 || fix >= textW || fiy < 0 || fiy >= textH) continue;
+          const fMask = textMask![fiy * textW + fix];
+          if (fMask < 80) continue;
+
+          // Cursor interaction
+          const cdx2 = fx - mouseX, cdy2 = fy - mouseY;
+          const cDist2 = Math.sqrt(cdx2 * cdx2 + cdy2 * cdy2);
+          let logoCI = 0;
+          if (cDist2 < CURSOR_RADIUS && cDist2 > 0) {
+            const f = 1 - cDist2 / CURSOR_RADIUS;
+            logoCI = f * f;
+          }
+
+          const logoRadius = 0.8 + logoCI * 0.4;
+
+          const logoOpNoise = (noise2D(bx * 0.003 + opT, by * 0.003 + opT * 0.7) + 1) * 0.5;
+          let logoOpacity = 0.7 + logoOpNoise * 0.3;
+
+          // Wave reveal
+          if (elapsed < WAVE_DURATION + 600) {
+            let dotNorm: number, waveNoise: number;
+            if (MODE.waveDir === "top") {
+              dotNorm = by / H;
+              waveNoise = noise2D(bx * 0.006, 42) * 0.06;
+            } else if (MODE.waveDir === "center") {
+              const cx = (bx - W * 0.5) / (W * 0.5);
+              const cy = (by - H * 0.5) / (H * 0.5);
+              dotNorm = Math.sqrt(cx * cx + cy * cy);
+              waveNoise = noise2D(bx * 0.004 + by * 0.004, 42) * 0.06;
+            } else {
+              dotNorm = bx / W;
+              waveNoise = noise2D(by * 0.006, 42) * 0.06;
+            }
+            const distPastWave = (dotNorm + waveNoise) - waveFront;
+            const waveAlpha = Math.max(0, Math.min(1, distPastWave / WAVE_FEATHER));
+            logoOpacity *= waveAlpha;
+            if (waveAlpha < 0.01) continue;
+          }
+
+          // Brighter than background dots, with the cool tint
+          const lBright = 0.85 + logoOpNoise * 0.15;
+          const lr = Math.floor(lBright * 255 * MODE.tint[0]);
+          const lg = Math.floor(lBright * 255 * MODE.tint[1]);
+          const lb = Math.floor(lBright * 255 * MODE.tint[2]);
+
+          // Under cursor: chaotic radiation decay outward from cursor
+          if (logoCI > 0.05) {
+            const distNorm = 1 - logoCI; // 0 at center, ~1 at edge
+            // Per-dot random seed for chaos
+            const seed = (col * 7919 + row * 104729) >>> 0;
+            const r1 = (seed & 0xffff) / 0xffff;
+            const r2 = ((seed >> 8) & 0xffff) / 0xffff;
+            // Multiple overlapping noise frequencies for erratic flicker
+            const n1 = noise2D(bx * 0.04 + time * 0.008, by * 0.04 + r1 * 50);
+            const n2 = noise2D(bx * 0.1 + time * 0.015 + 300, by * 0.1 + r2 * 80);
+            const flicker = n1 * 0.6 + n2 * 0.4; // -1 to 1
+            // More likely to vanish near center, falls off with distance
+            const killChance = logoCI * 0.85;
+            if (flicker < killChance * 2 - 1 + distNorm * 0.8) continue;
+          }
+
+          ctx.fillStyle = `rgba(${lr},${lg},${lb},${logoOpacity})`;
+          ctx.beginPath();
+          ctx.arc(fx, fy, logoRadius, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      }
 
       if (elapsed > WAVE_DURATION * 0.6 && !isTouchDevice) {
         for (let i = 0; i < descriptorChars.length; i++) {
@@ -592,30 +658,6 @@ export default function Home() {
       mouseVX *= 0.88;
       mouseVY *= 0.88;
 
-      // Wordmark tilt + drift
-      if (wordmarkEl) {
-        const active = mouseX > -100;
-        const nx = active ? (mouseX - W * 0.5) / (W * 0.5) : 0;
-        const ny = active ? (mouseY - H * 0.5) / (H * 0.5) : 0;
-        const targetTX = ny * -18;
-        const targetTY = nx * 18;
-        const targetDX = nx * -14;
-        const targetDY = ny * -14;
-        const lerpSpeed = active ? 0.08 : 0.18; // snap back faster when inactive
-        wordmarkTiltX += (targetTX - wordmarkTiltX) * lerpSpeed;
-        wordmarkTiltY += (targetTY - wordmarkTiltY) * lerpSpeed;
-        wordmarkDriftX += (targetDX - wordmarkDriftX) * lerpSpeed;
-        wordmarkDriftY += (targetDY - wordmarkDriftY) * lerpSpeed;
-        // Hard-zero near centre to prevent floating offset
-        if (!active) {
-          if (Math.abs(wordmarkTiltX) < 0.05) wordmarkTiltX = 0;
-          if (Math.abs(wordmarkTiltY) < 0.05) wordmarkTiltY = 0;
-          if (Math.abs(wordmarkDriftX) < 0.05) wordmarkDriftX = 0;
-          if (Math.abs(wordmarkDriftY) < 0.05) wordmarkDriftY = 0;
-        }
-        wordmarkEl.style.transform = `perspective(700px) rotateX(${wordmarkTiltX}deg) rotateY(${wordmarkTiltY}deg) translate(${wordmarkDriftX}px, ${wordmarkDriftY}px)`;
-      }
-
     }
 
     const logoReady = new Promise<void>((resolve) => {
@@ -633,69 +675,10 @@ export default function Home() {
       setTimeout(startAfterFont, 800);
     }
 
-    const onResize = () => { fullInit(); if (typeof syncTickerPhase === 'function') syncTickerPhase(); };
+    const onResize = () => { fullInit(); };
     window.addEventListener("resize", onResize);
 
-    // Ticker setup
-    const TICKER_PHRASE = 'Creation is destruction is ';
-    const GLITCH_CHARS = '01░▓╔╗╚╝║═#@!X+<>{}\\|/~^';
-    const TICKER_REPS = 12;
-
-    function buildTickerStrip(el: HTMLElement) {
-      const frag = document.createDocumentFragment();
-      const text = TICKER_PHRASE.repeat(TICKER_REPS);
-      for (const ch of text) {
-        const s = document.createElement('span');
-        s.className = 'tk-char';
-        s.dataset.o = ch;
-        s.textContent = ch;
-        frag.appendChild(s);
-      }
-      el.appendChild(frag);
-    }
-
-    const tkTopEl  = document.getElementById('tk-top')!;
-    const tkRtEl   = document.getElementById('tk-right')!;
-    const tkBotEl  = document.getElementById('tk-bot')!;
-    const tkLtEl   = document.getElementById('tk-left')!;
-    const tkEls = [tkTopEl, tkRtEl, tkBotEl, tkLtEl].filter(Boolean) as HTMLElement[];
-    tkEls.forEach(buildTickerStrip);
-
-    // Phase offsets so words flow as one continuous conveyor belt
-    const TK_DUR = 45; // must match CSS animation-duration
-    function syncTickerPhase() {
-      const contentW = tkTopEl?.offsetWidth || 1;
-      const S = 22;
-      const topLen = W - 2 * S;
-      const rightLen = H;
-      const botLen = topLen;
-      const speed = contentW * 0.5 / TK_DUR; // px/s
-      tkTopEl.style.animationDelay  = '0s';
-      tkRtEl.style.animationDelay   = `${-(topLen / speed)}s`;
-      tkBotEl.style.animationDelay  = `${-((topLen + rightLen) / speed)}s`;
-      tkLtEl.style.animationDelay   = `${-((topLen + rightLen + botLen) / speed)}s`;
-    }
-    setTimeout(syncTickerPhase, 0); // after layout
-
-    const allTkChars: HTMLSpanElement[] = [];
-    tkEls.forEach(el => el.querySelectorAll<HTMLSpanElement>('.tk-char').forEach(s => allTkChars.push(s)));
-
-    const glitchTicker = setInterval(() => {
-      const n = 6 + Math.floor(Math.random() * 8);
-      for (let i = 0; i < n; i++) {
-        const s = allTkChars[Math.floor(Math.random() * allTkChars.length)];
-        if (!s) continue;
-        const orig = s.dataset.o || '';
-        if (orig === ' ') continue;
-        const cls = Math.random() < 0.5 ? 'gf' : 'gh';
-        s.textContent = GLITCH_CHARS[Math.floor(Math.random() * GLITCH_CHARS.length)];
-        s.classList.add(cls);
-        setTimeout(() => { s.textContent = orig; s.classList.remove('gf'); s.classList.remove('gh'); }, 40 + Math.random() * 80);
-      }
-    }, 80);
-
     return () => {
-      clearInterval(glitchTicker);
       cancelAnimationFrame(rafRing);
       cancelAnimationFrame(rafMain);
       document.removeEventListener("mousemove", onMouseMove);
@@ -711,31 +694,26 @@ export default function Home() {
 
   return (
     <>
+      {/* Grain texture overlay */}
+      <svg className="grain-overlay" aria-hidden="true">
+        <filter id="grain">
+          <feTurbulence type="fractalNoise" baseFrequency="0.65" numOctaves="3" stitchTiles="stitch" />
+          <feColorMatrix type="saturate" values="0" />
+        </filter>
+        <rect width="100%" height="100%" filter="url(#grain)" />
+      </svg>
+
       <canvas id="particle-canvas" />
-      <div className="ticker-frame">
-        <div className="ticker-corner ticker-corner-tl" />
-        <div className="ticker-corner ticker-corner-tr" />
-        <div className="ticker-corner ticker-corner-bl" />
-        <div className="ticker-corner ticker-corner-br" />
-        <div className="ticker-edge ticker-top"><div id="tk-top" className="tk-scroll"></div></div>
-        <div className="ticker-edge ticker-right"><div id="tk-right" className="tk-scroll"></div></div>
-        <div className="ticker-edge ticker-bottom"><div id="tk-bot" className="tk-scroll"></div></div>
-        <div className="ticker-edge ticker-left"><div id="tk-left" className="tk-scroll"></div></div>
+
+      <div className="scroll-container">
+        {/* Hero */}
+        <section className="hero-section">
+          <div id="wordmark-wrap" className="wordmark-wrap">
+            <div className="studio-descriptor" id="studio-descriptor" />
+          </div>
+        </section>
       </div>
-      <div id="wordmark-wrap" className="wordmark-wrap">
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
-          id="wordmark-img"
-          src="/asunder-logo.png"
-          alt="Asunder"
-          className="wordmark-img"
-        />
-        <div className="studio-descriptor" id="studio-descriptor" />
-      </div>
-      <div className="bottom-bar">
-        <span>Tear apart. Rebuild. Repeat.</span>
-        <span className="contact">hello@asunder.studio</span>
-      </div>
+
       <div className="cursor-dot" id="cursor-dot" />
       <div className="cursor-ring" id="cursor-ring" />
     </>
