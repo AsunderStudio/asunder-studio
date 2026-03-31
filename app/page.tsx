@@ -212,7 +212,7 @@ export default function Home() {
       const octx = off.getContext("2d")!;
 
       // Scale logo to fit viewport width with margins
-      const targetW = Math.min(W * 0.343, 396);
+      const targetW = IS_MOBILE ? Math.min(W * 0.75, 360) : Math.min(W * 0.343, 396);
       const scale = targetW / logoImg.naturalWidth;
       const logoH = logoImg.naturalHeight * scale;
       const lx = (W - targetW) / 2;
@@ -538,7 +538,7 @@ export default function Home() {
       }
 
       // ── Logo interior: dense dot fill ──
-      const LOGO_SPACING = IS_MOBILE ? 4 : 3;
+      const LOGO_SPACING = IS_MOBILE ? 2.5 : 3;
       const logoCols = Math.ceil(W / LOGO_SPACING);
       const logoRows = Math.ceil(H / LOGO_SPACING);
       for (let row = 0; row < logoRows; row++) {
