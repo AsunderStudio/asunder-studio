@@ -8,20 +8,28 @@ export default function Home() {
     const cursorRing = document.getElementById("cursor-ring") as HTMLElement;
     const descriptorEl = document.getElementById("studio-descriptor") as HTMLElement;
 
-    // Build per-character descriptor
-    const DESCRIPTOR_TEXT = "A Creative Studio For The Agentic Era";
-    const descriptorChars: { el: HTMLSpanElement; brightness: number }[] = [];
-    for (let i = 0; i < DESCRIPTOR_TEXT.length; i++) {
+    // Build per-character descriptor — random glyphs + "2026."
+    const GLYPH_POOL = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789@#$%&*+=<>/?{}[]~";
+    const FIXED_SUFFIX = " 2026.";
+    const GLYPH_COUNT = 24; // random glyphs before the fixed suffix
+    const descriptorChars: { el: HTMLSpanElement; brightness: number; isGlyph: boolean }[] = [];
+    for (let i = 0; i < GLYPH_COUNT + FIXED_SUFFIX.length; i++) {
       const span = document.createElement("span");
       span.classList.add("char");
-      if (DESCRIPTOR_TEXT[i] === " ") {
-        span.classList.add("space");
-        span.innerHTML = "&nbsp;";
+      const isGlyph = i < GLYPH_COUNT;
+      if (!isGlyph) {
+        const ch = FIXED_SUFFIX[i - GLYPH_COUNT];
+        if (ch === " ") {
+          span.classList.add("space");
+          span.innerHTML = "&nbsp;";
+        } else {
+          span.textContent = ch;
+        }
       } else {
-        span.textContent = DESCRIPTOR_TEXT[i];
+        span.textContent = GLYPH_POOL[Math.floor(Math.random() * GLYPH_POOL.length)];
       }
       descriptorEl.appendChild(span);
-      descriptorChars.push({ el: span, brightness: 0 });
+      descriptorChars.push({ el: span, brightness: 0, isGlyph });
     }
 
     const ILLUMINATE_RADIUS = 180;
@@ -628,29 +636,42 @@ export default function Home() {
         }
       }
 
-      if (elapsed > WAVE_DURATION * 0.6 && !isTouchDevice) {
-        for (let i = 0; i < descriptorChars.length; i++) {
-          const ch = descriptorChars[i];
-          const rect = ch.el.getBoundingClientRect();
-          if (rect.width === 0) continue;
-          const charCX = rect.left + rect.width * 0.5;
-          const charCY = rect.top + rect.height * 0.5;
-          const ddx = mouseX - charCX;
-          const ddy = mouseY - charCY;
-          const dist = Math.sqrt(ddx * ddx + ddy * ddy);
-          if (dist < ILLUMINATE_RADIUS) {
-            const falloff = 1 - dist / ILLUMINATE_RADIUS;
-            const intensity = falloff * falloff * (3 - 2 * falloff);
-            const target = intensity * ILLUMINATE_PEAK;
-            ch.brightness = Math.max(ch.brightness, ch.brightness + (target - ch.brightness) * 0.3);
-          } else {
-            ch.brightness = Math.max(0, ch.brightness - ILLUMINATE_DECAY);
+      if (elapsed > WAVE_DURATION * 0.6) {
+        // Cycle random glyphs
+        if (Math.floor(time * 0.006) !== Math.floor((time - 16) * 0.006)) {
+          for (let i = 0; i < descriptorChars.length; i++) {
+            const ch = descriptorChars[i];
+            if (ch.isGlyph && Math.random() < 0.15) {
+              ch.el.textContent = GLYPH_POOL[Math.floor(Math.random() * GLYPH_POOL.length)];
+            }
           }
-          const bv = ch.brightness;
-          if (bv > 0.001) {
-            ch.el.style.color = `rgba(255,255,255,${bv})`;
-          } else {
-            ch.el.style.color = "rgba(255,255,255,0.0)";
+        }
+
+        // Illuminate on hover
+        if (!isTouchDevice) {
+          for (let i = 0; i < descriptorChars.length; i++) {
+            const ch = descriptorChars[i];
+            const rect = ch.el.getBoundingClientRect();
+            if (rect.width === 0) continue;
+            const charCX = rect.left + rect.width * 0.5;
+            const charCY = rect.top + rect.height * 0.5;
+            const ddx = mouseX - charCX;
+            const ddy = mouseY - charCY;
+            const dist = Math.sqrt(ddx * ddx + ddy * ddy);
+            if (dist < ILLUMINATE_RADIUS) {
+              const falloff = 1 - dist / ILLUMINATE_RADIUS;
+              const intensity = falloff * falloff * (3 - 2 * falloff);
+              const target = intensity * ILLUMINATE_PEAK;
+              ch.brightness = Math.max(ch.brightness, ch.brightness + (target - ch.brightness) * 0.3);
+            } else {
+              ch.brightness = Math.max(0, ch.brightness - ILLUMINATE_DECAY);
+            }
+            const bv = ch.brightness;
+            if (bv > 0.001) {
+              ch.el.style.color = `rgba(255,255,255,${bv})`;
+            } else {
+              ch.el.style.color = "rgba(255,255,255,0.0)";
+            }
           }
         }
       }

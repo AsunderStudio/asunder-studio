@@ -3,10 +3,10 @@ import "./globals.css";
 
 export const metadata: Metadata = {
   title: "Asunder Studio",
-  description: "Veteran meets Vision. Coming soon.",
+  description: "A Creative Studio For The Agentic Era. 2026.",
   openGraph: {
     title: "Asunder Studio",
-    description: "Veteran meets Vision. Coming soon.",
+    description: "A Creative Studio For The Agentic Era. 2026.",
     url: "https://asunder.studio",
     siteName: "Asunder Studio",
     locale: "en_US",
@@ -15,7 +15,7 @@ export const metadata: Metadata = {
   twitter: {
     card: "summary_large_image",
     title: "Asunder Studio",
-    description: "Veteran meets Vision. Coming soon.",
+    description: "A Creative Studio For The Agentic Era. 2026.",
   },
 };
 
