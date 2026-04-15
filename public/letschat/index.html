@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>Chat</title>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap');
@@ -46,9 +46,13 @@
     .phone-frame {
       width: 100%;
       height: 100%;
-      height: 100dvh;
+      height: 100svh; /* smallest stable viewport — always fits under browser chrome */
       border-radius: 0;
       box-shadow: none;
+    }
+    .input-bar {
+      /* Clear home indicator / bottom browser toolbar on iOS */
+      padding-bottom: max(28px, calc(16px + env(safe-area-inset-bottom)));
     }
   }
 
