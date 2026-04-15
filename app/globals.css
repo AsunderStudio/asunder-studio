@@ -12,6 +12,43 @@
   font-display: swap;
 }
 
+@font-face {
+  font-family: 'Kingfall Aerial';
+  src: url('/fonts/KingfallAerial/font.woff2') format('woff2'),
+       url('/fonts/KingfallAerial/font.woff') format('woff');
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Kingfall Blessed';
+  src: url('/fonts/KingfallBlessed/font.woff2') format('woff2'),
+       url('/fonts/KingfallBlessed/font.woff') format('woff');
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Kingfall Dark';
+  src: url('/fonts/KingfallDark/font.woff2') format('woff2'),
+       url('/fonts/KingfallDark/font.woff') format('woff');
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Kingfall Engraved';
+  src: url('/fonts/KingfallEngraved/font.woff2') format('woff2'),
+       url('/fonts/KingfallEngraved/font.woff') format('woff');
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Kingfall Initials';
+  src: url('/fonts/KingfallInitials/font.woff2') format('woff2'),
+       url('/fonts/KingfallInitials/font.woff') format('woff');
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Kingfall Light';
+  src: url('/fonts/KingfallLight/font.woff2') format('woff2'),
+       url('/fonts/KingfallLight/font.woff') format('woff');
+  font-display: swap;
+}
+
 * { margin: 0; padding: 0; box-sizing: border-box; }
 
 html {
@@ -137,46 +174,49 @@ canvas#particle-canvas {
   left: 50%;
   transform: translateX(-50%);
   z-index: 6;
-}
-
-/* ── Hero email bar ── */
-.hero-email-bar {
-  position: fixed;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  z-index: 200;
-  background: #000;
-  border-top: 1px solid rgba(255, 255, 255, 0.08);
   display: flex;
+  flex-direction: column;
   align-items: center;
-  justify-content: center;
-  padding: clamp(14px, 1.6vh, 20px) 16px;
-  opacity: 0;
-  transform: translateY(100%);
-  animation: emailBarIn 900ms cubic-bezier(0.22, 0.61, 0.36, 1) 5200ms forwards;
 }
 
-@keyframes emailBarIn {
-  to { opacity: 1; transform: translateY(0); }
+/* ── Inline email below subcopy (reuses .char reveal) ── */
+.hero-email-inline {
+  display: block;
+  margin-top: 14px;
+  text-decoration: none;
+  pointer-events: auto;
+  cursor: pointer;
 }
 
-.hero-email {
+/* ── Meet the team button ── */
+.meet-team-btn {
+  display: inline-block;
+  margin-top: 28px;
   font-family: 'Space Mono', monospace;
-  font-size: clamp(0.58rem, 0.87vw, 0.74rem);
-  letter-spacing: 0.18em;
+  font-size: clamp(0.6rem, 0.85vw, 0.72rem);
+  letter-spacing: 0.22em;
   text-transform: uppercase;
   color: rgba(255, 255, 255, 0.85);
   text-decoration: none;
-  transition: color 0.3s ease;
-  position: relative;
-  z-index: 1;
+  padding: 10px 18px;
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  background: rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  transition: color 0.25s ease, border-color 0.25s ease, background 0.25s ease;
+  opacity: 0;
+  animation: heroFadeIn 700ms cubic-bezier(0.22, 0.61, 0.36, 1) 6500ms forwards;
+  pointer-events: auto;
+}
+.meet-team-btn:hover {
+  color: #fff;
+  border-color: rgba(255, 255, 255, 0.7);
+  background: rgba(0, 0, 0, 0.7);
 }
 
-.hero-email:hover { color: #fff; }
-
-@media (hover: none) and (pointer: coarse) {
-  .hero-email { color: #fff; }
+@keyframes heroFadeIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
 }
 
 

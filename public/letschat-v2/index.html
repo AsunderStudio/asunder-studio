@@ -1,0 +1,1283 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Chat</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=Space+Mono:wght@400;700&display=swap');
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  :root {
+    --bg: #0a0a0a;
+    --panel: #0f0f0f;
+    --line: rgba(255,255,255,0.08);
+    --line-bright: rgba(255,255,255,0.18);
+    --ink: rgba(255,255,255,0.92);
+    --dim: rgba(255,255,255,0.45);
+    --faint: rgba(255,255,255,0.22);
+    --mono: 'Space Mono', ui-monospace, monospace;
+    --sans: 'Space Grotesk', sans-serif;
+  }
+
+  html, body { height: 100%; }
+  body {
+    font-family: var(--sans);
+    background: var(--bg);
+    color: var(--ink);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    padding: 20px;
+    position: relative;
+    overflow: hidden;
+  }
+
+
+  /* Grain */
+  body::before {
+    content: '';
+    position: fixed; inset: 0;
+    pointer-events: none;
+    z-index: 999;
+    opacity: 0.3;
+    mix-blend-mode: overlay;
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='240' height='240'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3' stitchTiles='stitch'/><feColorMatrix type='saturate' values='0'/></filter><rect width='100%25' height='100%25' filter='url(%23n)'/></svg>");
+  }
+
+  /* Scanline overlay inside phone */
+  .phone-frame::after {
+    content: '';
+    position: absolute; inset: 0;
+    pointer-events: none;
+    background: repeating-linear-gradient(
+      to bottom,
+      rgba(255,255,255,0.015) 0px,
+      rgba(255,255,255,0.015) 1px,
+      transparent 1px,
+      transparent 3px
+    );
+    z-index: 40;
+  }
+
+  .phone-frame {
+    width: 390px;
+    height: 844px;
+    max-width: 100%;
+    max-height: calc(100vh - 40px);
+    max-height: calc(100dvh - 40px);
+    background: var(--bg);
+    border: 1px solid transparent;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    position: relative;
+    opacity: 0;
+    transform: scale(0.985);
+    animation: frameIn 900ms cubic-bezier(0.22, 0.61, 0.36, 1) 200ms forwards;
+  }
+  @keyframes frameIn {
+    0%   { opacity: 0; transform: scale(0.985); border-color: transparent; }
+    60%  { opacity: 1; transform: scale(1); border-color: transparent; }
+    100% { opacity: 1; transform: scale(1); border-color: var(--line-bright); }
+  }
+
+  /* Staggered reveal of UI pieces */
+  .phone-frame .status-bar,
+  .phone-frame .chat-header,
+  .phone-frame .chat-area,
+  .phone-frame .input-bar {
+    opacity: 0;
+  }
+  .phone-frame .status-bar { animation: uiIn 700ms cubic-bezier(0.22, 0.61, 0.36, 1) 1100ms forwards; }
+  .phone-frame .chat-header { animation: uiIn 700ms cubic-bezier(0.22, 0.61, 0.36, 1) 1500ms forwards; }
+  .phone-frame .input-bar { animation: uiIn 700ms cubic-bezier(0.22, 0.61, 0.36, 1) 1900ms forwards; }
+  .phone-frame .chat-area { animation: uiIn 700ms cubic-bezier(0.22, 0.61, 0.36, 1) 2300ms forwards; }
+  @keyframes uiIn {
+    from { opacity: 0; transform: translateY(6px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  @media (max-width: 430px) {
+    body { padding: 0; }
+    .phone-frame {
+      width: 100%;
+      height: 100vh;
+      height: 100dvh;
+      border: none;
+    }
+  }
+
+  .status-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 20px 6px;
+    color: var(--ink);
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    background: #050505;
+    border-bottom: 1px solid var(--line);
+    flex-shrink: 0;
+  }
+  .status-bar .right { display: flex; gap: 8px; align-items: center; }
+  .status-bar svg { width: 14px; height: 14px; fill: var(--ink); opacity: 0.7; }
+
+  .chat-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 14px 18px;
+    background: #050505;
+    flex-shrink: 0;
+    border-bottom: 1px solid var(--line);
+  }
+  .back-arrow {
+    color: var(--ink);
+    font-family: var(--mono);
+    font-size: 16px;
+    cursor: pointer;
+    opacity: 0.6;
+    transition: opacity 0.2s;
+  }
+  .back-arrow:hover { opacity: 1; }
+  .avatar-group {
+    width: 36px; height: 36px;
+    border: 1px solid var(--line-bright);
+    background: #000;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+    overflow: hidden;
+  }
+  .avatar-group img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    filter: invert(1);
+  }
+  .contact-info { flex: 1; min-width: 0; }
+  .contact-name {
+    color: var(--ink);
+    font-family: var(--mono);
+    font-size: 12px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+  }
+  .contact-status {
+    color: var(--dim);
+    font-family: var(--mono);
+    font-size: 9.5px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    transition: color 0.3s;
+    margin-top: 2px;
+  }
+  .contact-status.typing { color: var(--ink); }
+  .header-icons { display: flex; gap: 18px; }
+  .header-icons svg { width: 18px; height: 18px; fill: var(--ink); opacity: 0.5; }
+
+  .chat-area {
+    flex: 1;
+    overflow-y: auto;
+    padding: 14px 14px 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    background: var(--bg);
+    position: relative;
+  }
+  .chat-area::before {
+    content: '';
+    position: absolute; inset: 0;
+    pointer-events: none;
+    background-image: radial-gradient(rgba(255,255,255,0.04) 1px, transparent 1px);
+    background-size: 14px 14px;
+  }
+  .chat-area::-webkit-scrollbar { width: 2px; }
+  .chat-area::-webkit-scrollbar-thumb { background: var(--line-bright); }
+
+  .date-divider {
+    align-self: center;
+    color: var(--faint);
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 0.25em;
+    text-transform: uppercase;
+    padding: 10px 14px;
+    margin: 8px 0 6px;
+    opacity: 0;
+    transform: translateY(6px);
+    transition: all 0.4s ease;
+    position: relative;
+    z-index: 1;
+  }
+  .date-divider::before,
+  .date-divider::after {
+    content: '──';
+    margin: 0 10px;
+    opacity: 0.6;
+  }
+  .date-divider.visible { opacity: 1; transform: translateY(0); }
+
+  .msg {
+    max-width: 82%;
+    padding: 8px 12px 8px;
+    position: relative;
+    line-height: 1.45;
+    font-size: 13.5px;
+    font-family: var(--sans);
+    word-wrap: break-word;
+    opacity: 0;
+    transform: translateY(10px);
+    transition: opacity 0.4s ease, transform 0.4s cubic-bezier(0.22, 1, 0.36, 1), filter 0.4s;
+    filter: blur(4px);
+    z-index: 1;
+    border: 1px solid var(--line);
+    background: var(--panel);
+    color: var(--ink);
+  }
+  .msg.visible { opacity: 1; transform: translateY(0); filter: blur(0); }
+  .msg.fade-out, .date-divider.fade-out, .cluster-gap.fade-out {
+    opacity: 0 !important;
+    transform: translateY(-8px) !important;
+    filter: blur(4px) !important;
+    transition: all 0.45s ease-in;
+  }
+
+  .msg.frances { align-self: flex-start; }
+  .msg.joseph  { align-self: flex-end; background: #141414; }
+  .msg.user    { align-self: flex-end; background: #1a1a1a; border-color: var(--line-bright); }
+
+  /* Sender name label */
+  .msg .sender-name {
+    font-family: var(--mono);
+    font-size: 9.5px;
+    font-weight: 700;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    margin-bottom: 4px;
+    line-height: 1;
+    color: var(--dim);
+  }
+  .msg .sender-name.frances { color: #e8c547; }
+  .msg .sender-name.joseph  { color: #5ea8ff; }
+  .msg .sender-name.user    { color: #5ed37a; }
+
+  .msg .text { margin-bottom: 4px; }
+  .msg .meta {
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    gap: 6px;
+    padding-top: 2px;
+  }
+  .msg .time {
+    font-family: var(--mono);
+    font-size: 9px;
+    letter-spacing: 0.12em;
+    color: var(--faint);
+    white-space: nowrap;
+  }
+  .msg.joseph .ticks, .msg.user .ticks {
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--dim);
+    line-height: 1;
+  }
+  .msg.joseph .ticks.single, .msg.user .ticks.single { color: var(--faint); }
+
+  /* Remove bubble tails for cleaner grid feel */
+  .msg.tail::before { display: none; }
+
+  .cluster-gap { height: 10px; }
+
+  .typing-indicator {
+    margin-left: 0;
+    background: var(--panel);
+    border: 1px solid var(--line);
+    padding: 10px 14px;
+    display: none;
+    gap: 6px;
+    align-items: center;
+    align-self: flex-start;
+    position: relative;
+    opacity: 0;
+    transform: translateY(6px);
+    transition: all 0.3s ease;
+    z-index: 1;
+  }
+  .typing-indicator.right {
+    align-self: flex-end;
+    margin-left: 0;
+    margin-right: 0;
+    background: #141414;
+  }
+  .typing-indicator::before { display: none; }
+  .typing-indicator.visible { display: flex; opacity: 1; transform: translateY(0); }
+  .typing-indicator .dot {
+    width: 4px; height: 4px;
+    background: var(--ink);
+    animation: typingBounce 1.3s ease-in-out infinite;
+  }
+  .typing-indicator .dot:nth-child(2) { animation-delay: 0.18s; }
+  .typing-indicator .dot:nth-child(3) { animation-delay: 0.36s; }
+
+  @keyframes typingBounce {
+    0%, 60%, 100% { opacity: 0.25; transform: translateY(0); }
+    30% { opacity: 1; transform: translateY(-3px); }
+  }
+
+  .emoji-react {
+    font-size: 14px;
+    position: absolute;
+    bottom: -10px;
+    background: var(--bg);
+    padding: 2px 5px;
+    line-height: 1;
+    border: 1px solid var(--line-bright);
+    opacity: 0;
+    transform: scale(0.6);
+    transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+  .emoji-react.visible { opacity: 1; transform: scale(1); }
+  .msg.joseph .emoji-react, .msg.user .emoji-react { left: 6px; }
+  .msg.frances .emoji-react { right: 6px; }
+
+  /* Email CTA */
+  .cta-btn {
+    display: inline-block;
+    padding: 10px 18px;
+    background: var(--ink);
+    color: #000;
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    text-decoration: none;
+    cursor: pointer;
+    transition: background 0.2s, color 0.2s;
+    border: 1px solid var(--ink);
+  }
+  .cta-btn:hover { background: transparent; color: var(--ink); }
+  .cta-wrap { margin-top: 10px; }
+
+  /* Landing overlay */
+  .landing {
+    position: absolute;
+    inset: 0;
+    background: var(--bg);
+    color: var(--ink);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    padding: 44px 32px;
+    z-index: 50;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.5s ease;
+  }
+  .landing.visible { opacity: 1; pointer-events: auto; }
+  .landing-close {
+    position: absolute;
+    top: 18px;
+    right: 22px;
+    background: none;
+    border: none;
+    color: var(--dim);
+    font-family: var(--mono);
+    font-size: 16px;
+    line-height: 1;
+    cursor: pointer;
+    padding: 6px 8px;
+    transition: color 0.2s;
+  }
+  .landing-close:hover { color: var(--ink); }
+  .landing h1 {
+    font-family: var(--sans);
+    font-size: 44px;
+    font-weight: 700;
+    letter-spacing: -0.035em;
+    line-height: 1;
+    text-transform: uppercase;
+    margin-bottom: 28px;
+    color: var(--ink);
+  }
+  .landing .logo {
+    display: block;
+    width: auto;
+    height: 42px;
+    max-width: 70%;
+    margin-bottom: 28px;
+    filter: invert(1) brightness(1.2);
+    opacity: 0.9;
+  }
+  .landing p {
+    font-family: var(--sans);
+    font-size: 14.5px;
+    line-height: 1.6;
+    margin-bottom: 16px;
+    color: rgba(255,255,255,0.75);
+  }
+  .landing p.lede {
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--ink);
+  }
+  .landing .ctas {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-top: 28px;
+  }
+  .landing .btn {
+    display: block;
+    padding: 14px 20px;
+    text-align: center;
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    text-decoration: none;
+    transition: background 0.2s, color 0.2s, border-color 0.2s;
+    border: 1px solid var(--line-bright);
+  }
+  .landing .btn.primary {
+    background: var(--ink);
+    color: #000;
+    border-color: var(--ink);
+  }
+  .landing .btn.primary:hover {
+    background: transparent;
+    color: var(--ink);
+  }
+  .landing .btn.secondary {
+    background: transparent;
+    color: var(--ink);
+  }
+  .landing .btn.secondary:hover {
+    border-color: var(--ink);
+    background: rgba(255,255,255,0.04);
+  }
+  .landing .btn .sub {
+    display: block;
+    font-size: 9px;
+    letter-spacing: 0.18em;
+    opacity: 0.55;
+    margin-top: 4px;
+    text-transform: uppercase;
+  }
+
+  .input-bar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 12px 24px;
+    background: #050505;
+    border-top: 1px solid var(--line);
+    flex-shrink: 0;
+  }
+  .input-field {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: var(--panel);
+    border: 1px solid var(--line);
+    padding: 8px 12px;
+    position: relative;
+  }
+  .input-field svg { width: 18px; height: 18px; fill: var(--dim); flex-shrink: 0; cursor: pointer; }
+  .input-field input {
+    flex: 1;
+    background: none;
+    border: none;
+    outline: none;
+    color: var(--ink);
+    font-family: var(--mono);
+    font-size: 12px;
+    letter-spacing: 0.04em;
+  }
+  .input-field input::placeholder { color: var(--dim); }
+  .input-field input::selection { background: rgba(255,255,255,0.2); }
+
+  .fake-placeholder {
+    position: absolute;
+    left: 42px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-family: var(--mono);
+    font-size: 12px;
+    letter-spacing: 0.04em;
+    pointer-events: none;
+    white-space: nowrap;
+    color: var(--dim);
+    background-image: linear-gradient(90deg,
+      var(--dim) 0%, var(--dim) 35%,
+      var(--ink) 50%,
+      var(--dim) 65%, var(--dim) 100%);
+    background-size: 250% 100%;
+    background-position: 150% 0;
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    opacity: 0;
+    animation: nudge-shimmer 14s ease-in-out infinite;
+  }
+  @keyframes nudge-shimmer {
+    0%, 71.4%   { opacity: 0; background-position: 150% 0; }
+    73.6%       { opacity: 1; background-position: 150% 0; }
+    89.3%       { opacity: 1; background-position: -150% 0; }
+    92.9%       { opacity: 1; background-position: -150% 0; }
+    95%, 100%   { opacity: 0; background-position: -150% 0; }
+  }
+  .input-field:focus-within .fake-placeholder,
+  .input-field.has-value .fake-placeholder {
+    animation: none;
+    opacity: 0;
+  }
+  .input-field:has(input:disabled) .fake-placeholder { display: none; }
+
+  .send-btn {
+    width: 40px; height: 40px;
+    background: transparent;
+    border: 1px solid var(--line-bright);
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0; cursor: pointer;
+    transition: background 0.2s, border-color 0.2s;
+    outline: none;
+  }
+  .send-btn:hover { background: var(--ink); border-color: var(--ink); }
+  .send-btn:hover svg { fill: #000; }
+  .send-btn:active { opacity: 0.8; }
+  .send-btn svg { width: 16px; height: 16px; fill: var(--ink); transition: fill 0.2s; }
+
+  /* Subtle glitch shimmer on message in */
+  @keyframes glitchIn {
+    0%   { clip-path: inset(0 100% 0 0); }
+    50%  { clip-path: inset(0 0 0 0); transform: translateX(-1px); }
+    100% { clip-path: inset(0 0 0 0); transform: translateX(0); }
+  }
+  .msg.visible { animation: glitchIn 0.35s ease-out; }
+</style>
+</head>
+<body>
+
+<div class="phone-frame">
+  <div class="status-bar">
+    <span>9:41</span>
+    <div class="right">
+      <svg viewBox="0 0 24 24"><path d="M1 9l2 2c4.97-4.97 13.03-4.97 18 0l2-2C16.93 2.93 7.08 2.93 1 9zm8 8l3 3 3-3c-1.65-1.66-4.34-1.66-6 0zm-4-4l2 2c2.76-2.76 7.24-2.76 10 0l2-2C15.14 9.14 8.87 9.14 5 13z"/></svg>
+      <svg viewBox="0 0 24 24"><path d="M15.67 4H14V2h-4v2H8.33C7.6 4 7 4.6 7 5.33v15.34C7 21.4 7.6 22 8.33 22h7.34c.73 0 1.33-.6 1.33-1.33V5.33C17 4.6 16.4 4 15.67 4z"/></svg>
+    </div>
+  </div>
+
+  <div class="chat-header">
+    <div class="back-arrow">&lsaquo;</div>
+    <div class="avatar-group"><img src="/Black-and-White-Logo-1.png" alt="Asunder"></div>
+    <div class="contact-info">
+      <div class="contact-name">Frances & Joseph</div>
+      <div class="contact-status" id="contactStatus">Frances, Joseph</div>
+    </div>
+    <div class="header-icons">
+      <svg viewBox="0 0 24 24"><path d="M15 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm-9-2V7H4v3H1v2h3v3h2v-3h3v-2H6zm9 4c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>
+      <svg viewBox="0 0 24 24"><path d="M12 8c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm0 2c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm0 6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z"/></svg>
+    </div>
+  </div>
+
+  <div class="chat-area" id="chat">
+    <div class="typing-indicator" id="typingIndicator">
+      <div class="dot"></div>
+      <div class="dot"></div>
+      <div class="dot"></div>
+    </div>
+  </div>
+
+  <div class="landing" id="landing" aria-hidden="true">
+    <button class="landing-close" id="landingClose" aria-label="Close">&times;</button>
+    <img class="logo" src="asunder-logo-white.png" alt="Asunder">
+
+    <p class="lede">Want to get us ripping your playbook up? Say hello.</p>
+    <p>Serious enquiries only.</p>
+    <div class="ctas">
+      <a class="btn primary" id="landingEmail" href="mailto:hello@asunderstudio.com">Get in touch &rarr;<span class="sub">hello@asunderstudio.com</span></a>
+      <a class="btn secondary" id="landingCall" href="#" target="_blank" rel="noopener">Book a 20-min call</a>
+    </div>
+  </div>
+
+  <div class="input-bar">
+    <div class="input-field">
+      <svg viewBox="0 0 24 24"><path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm3.5-9c.83 0 1.5-.67 1.5-1.5S16.33 8 15.5 8 14 8.67 14 9.5s.67 1.5 1.5 1.5zm-7 0c.83 0 1.5-.67 1.5-1.5S9.33 8 8.5 8 7 8.67 7 9.5 7.67 11 8.5 11zm3.5 6.5c2.33 0 4.31-1.46 5.11-3.5H6.89c.8 2.04 2.78 3.5 5.11 3.5z"/></svg>
+      <input type="text" id="userInput" placeholder="" autocomplete="off">
+      <span class="fake-placeholder" id="fakePlaceholder">say something...</span>
+      <svg viewBox="0 0 24 24"><path d="M16.5 6v11.5c0 2.21-1.79 4-4 4s-4-1.79-4-4V5c0-1.38 1.12-2.5 2.5-2.5s2.5 1.12 2.5 2.5v10.5c0 .55-.45 1-1 1s-1-.45-1-1V6H10v9.5c0 1.38 1.12 2.5 2.5 2.5s2.5-1.12 2.5-2.5V5c0-2.21-1.79-4-4-4S7 2.79 7 5v12.5c0 3.04 2.46 5.5 5.5 5.5s5.5-2.46 5.5-5.5V6h-1.5z"/></svg>
+    </div>
+    <button class="send-btn" id="sendBtn">
+      <svg viewBox="0 0 24 24"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
+    </button>
+  </div>
+</div>
+
+<script>
+// ---- CONFIG ----
+const EMAIL = 'hello@asunderstudio.com'; // change this
+const CALENDLY_URL = '#'; // TODO: replace with real booking link
+
+// F = Frances (business lead), J = Joseph (creative director)
+const conversation = [
+  { type: 'divider', text: 'THURSDAY' },
+
+  { from: 'frances', tail: true,  text: 'ok i had an idea in the ikea carpark', time: '2:41 PM' },
+  { type: 'gap' },
+
+  { from: 'joseph', tail: true,  text: 'oh no', time: '2:41 PM' },
+  { type: 'gap' },
+
+  { from: 'frances', tail: true,  text: 'what if we didn\'t do decks', time: '2:42 PM' },
+  { from: 'frances', tail: false, text: 'like at all. ever. not one.', time: '2:42 PM' },
+  { type: 'gap' },
+
+  { from: 'joseph', tail: true,  text: 'you mean what if we starved to death within a month', time: '2:42 PM' },
+  { type: 'gap' },
+
+  { from: 'frances', tail: true,  text: 'no listen. we replace the deck with a package. a literal box. ships to the client. brand book. a film. a candle that smells like the brand.', time: '2:43 PM' },
+  { type: 'gap' },
+
+  { from: 'joseph', tail: true,  text: 'a candle that smells like the brand', time: '2:43 PM' },
+  { type: 'gap' },
+
+  { from: 'frances', tail: true,  text: 'a BRAND candle joseph', time: '2:44 PM' },
+  { type: 'gap' },
+
+  { from: 'joseph', tail: true,  text: 'ok. what does a fintech smell like', time: '2:44 PM' },
+  { from: 'joseph', tail: false, text: 'serious question', time: '2:44 PM' },
+  { type: 'gap' },
+
+  { from: 'frances', tail: true,  text: 'fresh linen and mild regret', time: '2:45 PM', emoji: '💀' },
+  { type: 'gap' },
+
+  { from: 'joseph', tail: true,  text: 'ok the package idea is actually good. the deck is the most hated document in our industry and we keep making them', time: '2:46 PM' },
+  { type: 'gap' },
+
+  { from: 'frances', tail: true,  text: '92 slides to explain a logo that took four minutes to draw', time: '2:46 PM' },
+  { type: 'gap' },
+
+  { from: 'joseph', tail: true,  text: 'what if every rebrand ships with a film. 60 seconds. no voiceover. just: this is who you are now', time: '2:47 PM' },
+  { type: 'gap' },
+
+  { from: 'frances', tail: true,  text: 'yes. what else. keep going', time: '2:47 PM' },
+  { type: 'gap' },
+
+  { from: 'joseph', tail: true,  text: 'what if we charge by the idea', time: '2:48 PM' },
+  { type: 'gap' },
+
+  { from: 'frances', tail: true,  text: 'explain', time: '2:48 PM' },
+  { type: 'gap' },
+
+  { from: 'joseph', tail: true,  text: 'no hours. no retainers. one idea = one invoice. if the idea is big, the invoice is big. if the idea is small we don\'t send one', time: '2:49 PM' },
+  { type: 'gap' },
+
+  { from: 'frances', tail: true,  text: 'so we\'re either rich or homeless', time: '2:49 PM' },
+  { type: 'gap' },
+
+  { from: 'joseph', tail: true,  text: 'correct', time: '2:49 PM' },
+  { type: 'gap' },
+
+  { from: 'frances', tail: true,  text: 'this might actually be the whole thing', time: '2:50 PM' },
+  { type: 'gap' },
+
+  { from: 'joseph', tail: true,  text: 'what if we only had one client at a time', time: '2:51 PM' },
+  { type: 'gap' },
+
+  { from: 'frances', tail: true,  text: 'one at a time?? we\'d sink inside a quarter', time: '2:51 PM' },
+  { type: 'gap' },
+
+  { from: 'joseph', tail: true,  text: 'or we\'d be the most focused studio on earth and they pay us accordingly. every engagement is a mission. we go in, do the work, leave', time: '2:52 PM' },
+  { type: 'gap' },
+
+  { from: 'frances', tail: true,  text: 'the mission framing is already doing something for me', time: '2:52 PM' },
+  { type: 'gap' },
+
+  { from: 'joseph', tail: true,  text: 'asunder: special forces for brands', time: '2:53 PM' },
+  { type: 'gap' },
+
+  { from: 'frances', tail: true,  text: 'please never say that in public', time: '2:53 PM' },
+  { type: 'gap' },
+
+  { from: 'joseph', tail: true,  text: 'ok next. what if the website was just a chat window', time: '2:54 PM' },
+  { from: 'joseph', tail: false, text: 'no about page. no grid of logos. no case studies. just us. talking.', time: '2:54 PM' },
+  { type: 'gap' },
+
+  { from: 'frances', tail: true,  text: 'meta. dangerous. i love it', time: '2:54 PM' },
+  { type: 'gap' },
+
+  { from: 'joseph', tail: true,  text: 'people scroll agency sites and remember nothing. nobody forgets a conversation they accidentally walked in on', time: '2:55 PM' },
+  { type: 'gap' },
+
+  { from: 'frances', tail: true,  text: 'especially if one of the people is me', time: '2:55 PM' },
+  { type: 'gap' },
+
+  { from: 'joseph', tail: true,  text: 'another one. emergency rebrand line. 24-hour turnaround. clients call us at 3am when a competitor drops something cursed', time: '2:56 PM' },
+  { type: 'gap' },
+
+  { from: 'frances', tail: true,  text: 'the brand ER', time: '2:56 PM', emoji: '🚨' },
+  { type: 'gap' },
+
+  { from: 'joseph', tail: true,  text: 'we show up with the AI pipeline, three coffees, and a plan by sunrise', time: '2:57 PM' },
+  { type: 'gap' },
+
+  { from: 'frances', tail: true,  text: 'you. not we. i don\'t do 3am', time: '2:57 PM' },
+  { type: 'gap' },
+
+  { from: 'joseph', tail: true,  text: 'you do the invoice part in the morning', time: '2:58 PM' },
+  { type: 'gap' },
+
+  { from: 'frances', tail: true,  text: 'beautiful. division of labour. founding document of our company', time: '2:58 PM' },
+  { type: 'gap' },
+
+  { from: 'frances', tail: true,  text: 'what about a residency', time: '2:59 PM' },
+  { from: 'frances', tail: false, text: 'we embed with a founder for a week. couch. whiteboard. the real stuff. then we build', time: '3:00 PM' },
+  { type: 'gap' },
+
+  { from: 'joseph', tail: true,  text: 'a documentary crew but for strategy', time: '3:00 PM' },
+  { type: 'gap' },
+
+  { from: 'frances', tail: true,  text: 'every other agency interviews the CEO for 40 minutes on zoom and calls it "discovery"', time: '3:01 PM' },
+  { type: 'gap' },
+
+  { from: 'joseph', tail: true,  text: 'discovery is a word that\'s been beaten to death behind a shed', time: '3:01 PM' },
+  { type: 'gap' },
+
+  { from: 'frances', tail: true,  text: 'ok ok try this', time: '3:02 PM' },
+  { from: 'frances', tail: false, text: 'anti-deliverables. we send clients a zine. a mixtape. a letter. one really good photo. the actual brand assets arrive later.', time: '3:02 PM' },
+  { type: 'gap' },
+
+  { from: 'joseph', tail: true,  text: 'the zine is the hook. the logo is the receipt.', time: '3:03 PM' },
+  { type: 'gap' },
+
+  { from: 'frances', tail: true,  text: 'write that down', time: '3:03 PM' },
+  { type: 'gap' },
+
+  { from: 'joseph', tail: true,  text: 'i am writing everything down. this chat IS the notebook', time: '3:03 PM' },
+  { type: 'gap' },
+
+  { from: 'frances', tail: true,  text: 'one more. a secret client list. we never publicly say who we work with. the only way to find us is through another client', time: '3:04 PM' },
+  { type: 'gap' },
+
+  { from: 'joseph', tail: true,  text: 'omertà for branding', time: '3:05 PM' },
+  { type: 'gap' },
+
+  { from: 'frances', tail: true,  text: 'makes us feel impossible to get to. which is its own marketing.', time: '3:05 PM' },
+  { type: 'gap' },
+
+  { from: 'joseph', tail: true,  text: 'the mystery is the media buy', time: '3:06 PM' },
+  { type: 'gap' },
+
+  { from: 'frances', tail: true,  text: 'wait. hold on. new idea.', time: '3:07 PM' },
+  { type: 'gap' },
+
+  { from: 'joseph', tail: true,  text: 'you have the look', time: '3:07 PM' },
+  { type: 'gap' },
+
+  { from: 'frances', tail: true,  text: 'we only take briefs that scare us. if the idea doesn\'t make one of us a little nauseous, we pass.', time: '3:08 PM' },
+  { type: 'gap' },
+
+  { from: 'joseph', tail: true,  text: 'the fear tax', time: '3:08 PM' },
+  { type: 'gap' },
+
+  { from: 'frances', tail: true,  text: 'if we\'re not nervous the work won\'t be good. so nerves become the filter.', time: '3:09 PM' },
+  { type: 'gap' },
+
+  { from: 'joseph', tail: true,  text: 'put that on the wall. when we have a wall.', time: '3:09 PM' },
+  { type: 'gap' },
+
+  { from: 'frances', tail: true,  text: 'we have a google doc that is metaphorically a wall', time: '3:10 PM' },
+  { type: 'gap' },
+
+  { from: 'joseph', tail: true,  text: 'ok i\'m getting somewhere. what if the tagline isn\'t a line. it\'s a smell.', time: '3:11 PM' },
+  { type: 'gap' },
+
+  { from: 'frances', tail: true,  text: 'a smell', time: '3:11 PM' },
+  { type: 'gap' },
+
+  { from: 'joseph', tail: true,  text: 'you walk into the flagship and you know. you can\'t say why. you just do.', time: '3:12 PM' },
+  { type: 'gap' },
+
+  { from: 'frances', tail: true,  text: 'so we\'re perfumers now', time: '3:12 PM' },
+  { type: 'gap' },
+
+  { from: 'joseph', tail: true,  text: 'part time', time: '3:12 PM' },
+  { type: 'gap' },
+
+  { from: 'frances', tail: true,  text: 'fine. adding it. what else.', time: '3:13 PM' },
+  { type: 'gap' },
+
+  { from: 'joseph', tail: true,  text: 'every brand gets a sworn enemy. written into the positioning. a company we will not name but will quietly take apart over five years.', time: '3:14 PM' },
+  { type: 'gap' },
+
+  { from: 'frances', tail: true,  text: 'that\'s a lot of legal risk', time: '3:14 PM' },
+  { type: 'gap' },
+
+  { from: 'joseph', tail: true,  text: 'that\'s the fun part', time: '3:14 PM' },
+  { type: 'gap' },
+
+  { from: 'frances', tail: true,  text: 'ok mine. annual reports written as short stories. no charts. no bullet points. one unnamed narrator.', time: '3:15 PM' },
+  { type: 'gap' },
+
+  { from: 'joseph', tail: true,  text: 'the CFO would quit', time: '3:15 PM' },
+  { type: 'gap' },
+
+  { from: 'frances', tail: true,  text: 'the CFO would frame it', time: '3:16 PM' },
+  { type: 'gap' },
+
+  { from: 'joseph', tail: true,  text: 'a font that only exists on one typewriter. the client keeps the typewriter. every wordmark in the identity gets typed by hand on that machine.', time: '3:17 PM' },
+  { type: 'gap' },
+
+  { from: 'frances', tail: true,  text: 'scarcity as a type foundry', time: '3:17 PM' },
+  { type: 'gap' },
+
+  { from: 'joseph', tail: true,  text: 'and it means the brand has a real physical object at its centre. a thing. not a file.', time: '3:17 PM' },
+  { type: 'gap' },
+
+  { from: 'frances', tail: true,  text: 'next. we bury a time capsule under the client\'s HQ on launch day. opened in 40 years. contents undisclosed, including to the client.', time: '3:18 PM' },
+  { type: 'gap' },
+
+  { from: 'joseph', tail: true,  text: 'a brand with a secret even from itself', time: '3:18 PM' },
+  { type: 'gap' },
+
+  { from: 'frances', tail: true,  text: 'the more i say it out loud the more i mean it', time: '3:19 PM' },
+  { type: 'gap' },
+
+  { from: 'joseph', tail: true,  text: 'campaign with no launch. no press release. no paid media. we just start doing the thing and wait for someone to notice.', time: '3:20 PM' },
+  { type: 'gap' },
+
+  { from: 'frances', tail: true,  text: 'and if nobody notices', time: '3:20 PM' },
+  { type: 'gap' },
+
+  { from: 'joseph', tail: true,  text: 'then we were right about them not being ready', time: '3:20 PM' },
+  { type: 'gap' },
+
+  { from: 'frances', tail: true,  text: 'that is the most expensive shrug i\'ve ever heard', time: '3:21 PM' },
+  { type: 'gap' },
+
+  { from: 'joseph', tail: true,  text: 'put it on the invoice', time: '3:21 PM' },
+  { type: 'gap' },
+
+  { from: 'frances', tail: true,  text: 'ok here\'s one. we never show old work. no case studies, ever. the only proof we exist is the next thing we make.', time: '3:22 PM' },
+  { type: 'gap' },
+
+  { from: 'joseph', tail: true,  text: 'a portfolio of one', time: '3:22 PM' },
+  { type: 'gap' },
+
+  { from: 'frances', tail: true,  text: 'always the current piece. everything before it is gone.', time: '3:23 PM' },
+  { type: 'gap' },
+
+  { from: 'joseph', tail: true,  text: 'ok one more. 40-year campaign plan. first beat runs next quarter. last beat runs in 2066. the client signs their great-granddaughter to the deliverables.', time: '3:24 PM' },
+  { type: 'gap' },
+
+  { from: 'frances', tail: true,  text: 'billable till the heat death of the universe', time: '3:24 PM' },
+  { type: 'gap' },
+
+  { from: 'joseph', tail: true,  text: 'we either become a dynasty or a cautionary tale', time: '3:25 PM' },
+  { type: 'gap' },
+
+  { from: 'frances', tail: true,  text: 'those are the only two outcomes worth aiming at', time: '3:25 PM' },
+  { type: 'gap' },
+
+  { from: 'joseph', tail: true,  text: 'let\'s do all of it', time: '3:26 PM' },
+  { type: 'gap' },
+
+  { from: 'frances', tail: true,  text: 'all of what', time: '3:26 PM' },
+  { type: 'gap' },
+
+  { from: 'joseph', tail: true,  text: 'the chat website. the package. one idea one invoice. the residency. the fear tax. the 3am line you\'re not doing. the smell. the enemy. the typewriter. the capsule. the 40-year plan.', time: '3:27 PM' },
+  { type: 'gap' },
+
+  { from: 'frances', tail: true,  text: 'that\'s every idea we had in one afternoon', time: '3:28 PM' },
+  { type: 'gap' },
+
+  { from: 'joseph', tail: true,  text: 'yes', time: '3:28 PM' },
+  { type: 'gap' },
+
+  { from: 'frances', tail: true,  text: 'we should probably sleep on some of them', time: '3:29 PM' },
+  { type: 'gap' },
+
+  { from: 'joseph', tail: true,  text: 'we won\'t', time: '3:29 PM' },
+  { type: 'gap' },
+
+  { from: 'frances', tail: true,  text: 'no we won\'t', time: '3:30 PM' },
+  { type: 'gap' },
+
+  { from: 'frances', tail: true,  text: 'this is the part where we usually lose momentum and go back to safer work', time: '3:31 PM' },
+  { type: 'gap' },
+
+  { from: 'joseph', tail: true,  text: 'not this time', time: '3:31 PM' },
+  { type: 'gap' },
+
+  { from: 'frances', tail: true,  text: 'not this time', time: '3:32 PM' },
+];
+
+// Replies when user interacts — context-agnostic so they work whenever the user jumps in.
+// Every set ends on a CTA so the email prompt is never missed.
+const interactionReplies = [
+  // First message — caught mid-riff
+  [
+    { from: 'joseph', text: 'wait', delay: 800 },
+    { from: 'joseph', text: 'frances there\'s someone in here', delay: 1400 },
+    { from: 'frances', text: 'in here. in our private ideas chat.', delay: 1800 },
+    { from: 'joseph', text: 'apparently it was never that private', delay: 1000 },
+    { from: 'frances', text: 'ok hi. you\'ve walked in on us workshopping a brand candle. i\'m not sure which of us should apologise', delay: 2800 },
+    { from: 'joseph', text: 'how much did you hear. be honest.', delay: 2400 },
+    { from: 'frances', text: 'if you\'re here on purpose — email us. properly. we can explain the candle.', delay: 2000, cta: true },
+  ],
+  // Second message — warming up
+  [
+    { from: 'frances', text: 'still here joseph', delay: 1600 },
+    { from: 'joseph', text: 'persistent. i like that in a stranger', delay: 1800 },
+    { from: 'frances', text: 'are you a client, a spy from a big agency, or a person who wandered in', delay: 2600 },
+    { from: 'joseph', text: 'if you say the word synergy we are shutting this down', delay: 2000 },
+    { from: 'frances', text: 'he means it. i\'ve seen him leave rooms.', delay: 1600 },
+    { from: 'joseph', text: 'safer medium: email. tell us what\'s broken. we\'ll tell you if we can help.', delay: 2000, cta: true },
+  ],
+  // Third message — warmer, real offer
+  [
+    { from: 'joseph', text: 'ok. this one\'s committed. that\'s a creative director\'s trait.', delay: 2200 },
+    { from: 'frances', text: 'or a very lonely tuesday', delay: 2800 },
+    { from: 'joseph', text: 'either way they\'ve sat through enough of our riffing to deserve a real conversation', delay: 2200 },
+    { from: 'frances', text: 'let\'s do it properly — email us. no deck. just tell us what\'s actually going on.', delay: 2000, cta: true },
+    { from: 'joseph', text: 'we\'ll tell you if we can take it apart', delay: 2400 },
+    { from: 'frances', text: 'was that a pun?', delay: 1200 },
+  ],
+  // Fourth message — playful, nudge again
+  [
+    { from: 'joseph', text: 'still typing. do we have a fan', delay: 1800 },
+    { from: 'frances', text: 'or a bot with incredible taste', delay: 1600 },
+    { from: 'joseph', text: 'say something only a human would say', delay: 1400 },
+    { from: 'frances', text: 'joseph stop interrogating potential clients', delay: 1600 },
+    { from: 'frances', text: 'seriously though. email. we\'re less chaotic in a proper thread. allegedly.', delay: 2200, cta: true },
+    { from: 'joseph', text: 'that is a generous read of our email presence', delay: 1800 },
+  ],
+  // Fifth+ messages — basically on the team now
+  [
+    { from: 'frances', text: 'at this point you\'re in the founding meeting', delay: 2000 },
+    { from: 'joseph', text: 'do we add them to the spreadsheet', delay: 1800 },
+    { from: 'frances', text: 'the spreadsheet is not ready for outside eyes joseph', delay: 2200 },
+    { from: 'joseph', text: 'fair', delay: 800 },
+    { from: 'frances', text: 'email us before he offers you equity', delay: 1600, cta: true },
+  ],
+];
+
+// ---- ENGINE ----
+
+const chat = document.getElementById('chat');
+const typingEl = document.getElementById('typingIndicator');
+const statusEl = document.getElementById('contactStatus');
+const userInput = document.getElementById('userInput');
+const sendBtn = document.getElementById('sendBtn');
+
+let autoplayRunning = false;
+let autoplayPaused = false;
+let interactionCount = 0;
+let interactionMode = false;
+let ctaShown = false;
+
+function readTime(text) {
+  const words = text.split(/\s+/).length;
+  return Math.min(Math.max(800, 200 + words * 42), 3200);
+}
+function typeTime(text) {
+  const words = text.split(/\s+/).length;
+  return Math.min(600 + words * 80 + Math.random() * 400, 3000);
+}
+
+function nowTime() {
+  const d = new Date();
+  let h = d.getHours(), m = d.getMinutes();
+  const ap = h >= 12 ? 'PM' : 'AM';
+  h = h % 12 || 12;
+  return `${h}:${m < 10 ? '0' : ''}${m} ${ap}`;
+}
+
+function createMsgEl(msg) {
+  if (msg.type === 'divider') {
+    const el = document.createElement('div');
+    el.className = 'date-divider';
+    el.textContent = msg.text;
+    return el;
+  }
+  if (msg.type === 'gap') {
+    const el = document.createElement('div');
+    el.className = 'cluster-gap';
+    return el;
+  }
+  // side class: 'frances' (left), 'joseph' (right), 'user' (right purple)
+  const side = msg.from || 'user';
+  const isRight = side === 'joseph' || side === 'user';
+  const el = document.createElement('div');
+  el.className = ['msg', side, msg.tail ? 'tail' : ''].filter(Boolean).join(' ');
+
+  // Show sender name on tail messages (first in a cluster)
+  let nameHtml = '';
+  if (msg.tail && msg.from) {
+    const displayName = msg.from === 'frances' ? 'Frances' : msg.from === 'joseph' ? 'Joseph' : 'You';
+    nameHtml = `<div class="sender-name ${msg.from}">${displayName}</div>`;
+  }
+  // Ticks on right-side messages
+  let ticksHtml = isRight ? `<span class="ticks single">&#10003;</span>` : '';
+  const time = msg.time || nowTime();
+
+  let ctaHtml = '';
+  if (msg.cta) {
+    ctaHtml = `<div class="cta-wrap"><a class="cta-btn" href="mailto:${EMAIL}">Get in touch &rarr;</a></div>`;
+  }
+
+  el.innerHTML = `
+    ${nameHtml}
+    <div class="text">${msg.text}</div>
+    ${ctaHtml}
+    <div class="meta"><span class="time">${time}</span>${ticksHtml}</div>
+    ${msg.emoji ? `<span class="emoji-react">${msg.emoji}</span>` : ''}
+  `;
+  return el;
+}
+
+function scrollToBottom(smooth) {
+  chat.scrollTo({ top: chat.scrollHeight, behavior: smooth ? 'smooth' : 'auto' });
+}
+
+function showTyping(who) {
+  chat.appendChild(typingEl);
+  typingEl.classList.toggle('right', who === 'joseph');
+  typingEl.classList.add('visible');
+  const name = who === 'frances' ? 'Frances' : 'Joseph';
+  statusEl.textContent = `${name} is typing...`;
+  statusEl.classList.add('typing');
+  scrollToBottom(true);
+}
+
+function hideTyping() {
+  typingEl.classList.remove('visible', 'right');
+  statusEl.textContent = 'Frances, Joseph';
+  statusEl.classList.remove('typing');
+}
+
+function makeVisible(el) {
+  requestAnimationFrame(() => el.classList.add('visible'));
+}
+
+function readReceipt(el) {
+  const t = el.querySelector('.ticks');
+  if (t) { t.innerHTML = '&#10003;&#10003;'; t.classList.remove('single'); }
+}
+
+function popEmoji(el) {
+  const e = el.querySelector('.emoji-react');
+  if (e) setTimeout(() => e.classList.add('visible'), 600);
+}
+
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+
+// Cancellable sleep that aborts when user interacts
+let sleepAbort = null;
+function cancellableSleep(ms) {
+  return new Promise(resolve => {
+    const timer = setTimeout(() => resolve(false), ms);
+    sleepAbort = () => { clearTimeout(timer); resolve(true); };
+  });
+}
+
+async function clearChat() {
+  const kids = Array.from(chat.children).filter(c => c !== typingEl);
+  kids.forEach(c => c.classList.add('fade-out'));
+  await sleep(500);
+  kids.forEach(c => c.remove());
+  chat.scrollTop = 0;
+}
+
+// Post a single message with animation
+async function postMsg(msg, smooth) {
+  const el = createMsgEl(msg);
+  chat.insertBefore(el, typingEl);
+  scrollToBottom(smooth !== false);
+  await sleep(30);
+  makeVisible(el);
+  scrollToBottom(true);
+  const side = msg.from || 'user';
+  if (side === 'joseph' || side === 'user') {
+    setTimeout(() => readReceipt(el), 700 + Math.random() * 500);
+  }
+  popEmoji(el);
+  return el;
+}
+
+// ---- AUTOPLAY LOOP ----
+async function runLoop() {
+  while (true) {
+    if (interactionMode) { await sleep(500); continue; }
+    autoplayRunning = true;
+    chat.scrollTop = 0;
+
+    for (let i = 0; i < conversation.length; i++) {
+      if (interactionMode) break;
+
+      const msg = conversation[i];
+
+      if (msg.type === 'gap') {
+        const el = createMsgEl(msg);
+        chat.insertBefore(el, typingEl);
+        const aborted = await cancellableSleep(120);
+        if (aborted) break;
+        continue;
+      }
+
+      if (msg.type === 'divider') {
+        const el = createMsgEl(msg);
+        chat.insertBefore(el, typingEl);
+        await sleep(40);
+        makeVisible(el);
+        scrollToBottom(true);
+        const aborted = await cancellableSleep(600);
+        if (aborted) break;
+        continue;
+      }
+
+      // Compute read-delay from previous message
+      let prevMsg = null;
+      for (let j = i - 1; j >= 0; j--) {
+        if (conversation[j].from) { prevMsg = conversation[j]; break; }
+      }
+      const sameSender = prevMsg && prevMsg.from === msg.from;
+      const pauseAfterRead = prevMsg ? readTime(prevMsg.text) : 400;
+      const followUpPause = sameSender ? Math.min(pauseAfterRead * 0.4, 700) : pauseAfterRead;
+
+      // Show typing indicator then message
+      {
+        const aborted = await cancellableSleep(followUpPause);
+        if (aborted || interactionMode) break;
+      }
+      showTyping(msg.from);
+      {
+        const aborted = await cancellableSleep(typeTime(msg.text));
+        if (aborted || interactionMode) { hideTyping(); break; }
+      }
+      hideTyping();
+      await sleep(80);
+
+      if (interactionMode) break;
+      await postMsg(msg);
+    }
+
+    autoplayRunning = false;
+    if (interactionMode) continue;
+
+    // Hold then loop
+    const aborted = await cancellableSleep(4000);
+    if (aborted) continue;
+    await clearChat();
+    const aborted2 = await cancellableSleep(1500);
+    if (aborted2) continue;
+  }
+}
+
+// ---- USER INTERACTION ----
+async function handleUserMessage(text) {
+  if (!text.trim()) return;
+  // Once a CTA has been shown, the experience is frozen. Ignore further messages.
+  if (ctaShown) return;
+
+  // Stop autoplay
+  interactionMode = true;
+  if (sleepAbort) sleepAbort();
+  hideTyping();
+
+  // Post user's message
+  await postMsg({ from: 'user', text: text.trim(), tail: true, time: nowTime() });
+
+  // Pick reply set
+  const replyIndex = Math.min(interactionCount, interactionReplies.length - 1);
+  const replies = interactionReplies[replyIndex];
+  interactionCount++;
+
+  // Play replies — stop the moment a CTA is posted so the email button is the final beat
+  for (const reply of replies) {
+    await sleep(reply.delay || 1500);
+    showTyping(reply.from);
+    await sleep(typeTime(reply.text));
+    hideTyping();
+    await sleep(80);
+    await postMsg({ from: reply.from, tail: true, text: reply.text, emoji: reply.emoji, cta: reply.cta, time: nowTime() });
+    if (reply.cta) {
+      ctaShown = true;
+      userInput.disabled = true;
+      userInput.placeholder = 'Email us →';
+      sendBtn.disabled = true;
+      sendBtn.style.opacity = '0.4';
+      sendBtn.style.cursor = 'default';
+      break;
+    }
+  }
+
+  // Every reply set ends on a CTA — stop here so the user can read/click it.
+  // interactionMode stays true so runLoop never resumes and the chat doesn't refresh.
+}
+
+// Input handlers
+const inputField = userInput.closest('.input-field');
+function syncHasValue() {
+  inputField.classList.toggle('has-value', userInput.value.length > 0);
+}
+userInput.addEventListener('input', syncHasValue);
+
+sendBtn.addEventListener('click', () => {
+  const text = userInput.value;
+  userInput.value = '';
+  syncHasValue();
+  handleUserMessage(text);
+});
+userInput.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') {
+    e.preventDefault();
+    const text = userInput.value;
+    userInput.value = '';
+    syncHasValue();
+    handleUserMessage(text);
+  }
+});
+
+// ---- LANDING OVERLAY ----
+const landing = document.getElementById('landing');
+const landingClose = document.getElementById('landingClose');
+const landingEmail = document.getElementById('landingEmail');
+const landingCall = document.getElementById('landingCall');
+
+// Inject config-driven hrefs
+landingEmail.href = `mailto:${EMAIL}`;
+landingCall.href = CALENDLY_URL;
+
+function showLanding() {
+  landing.classList.add('visible');
+  landing.setAttribute('aria-hidden', 'false');
+}
+function hideLanding() {
+  landing.classList.remove('visible');
+  landing.setAttribute('aria-hidden', 'true');
+}
+landingClose.addEventListener('click', hideLanding);
+
+// Intercept in-chat CTA click — open landing overlay instead of firing mailto directly
+chat.addEventListener('click', (e) => {
+  const a = e.target.closest('.cta-btn');
+  if (!a) return;
+  e.preventDefault();
+  showLanding();
+});
+
+// Start after UI has assembled
+setTimeout(runLoop, 3000);
+</script>
+</body>
+</html>

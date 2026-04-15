@@ -27,24 +27,37 @@ export default function Home() {
 
     // Build per-character descriptor
     const DESCRIPTOR_TEXT = "ASUNDER is a creative studio\nfor the post-agency world";
+    const EMAIL_TEXT = "hello@asunder.studio";
     const descriptorChars: { el: HTMLSpanElement; brightness: number }[] = [];
-    for (let i = 0; i < DESCRIPTOR_TEXT.length; i++) {
-      const ch = DESCRIPTOR_TEXT[i];
-      if (ch === "\n") {
-        descriptorEl.appendChild(document.createElement("br"));
-        continue;
+
+    const appendChars = (text: string, parent: HTMLElement) => {
+      for (let i = 0; i < text.length; i++) {
+        const ch = text[i];
+        if (ch === "\n") {
+          parent.appendChild(document.createElement("br"));
+          continue;
+        }
+        const span = document.createElement("span");
+        span.classList.add("char");
+        if (ch === " ") {
+          span.classList.add("space");
+          span.innerHTML = "&nbsp;";
+        } else {
+          span.textContent = ch;
+        }
+        parent.appendChild(span);
+        descriptorChars.push({ el: span, brightness: 0 });
       }
-      const span = document.createElement("span");
-      span.classList.add("char");
-      if (ch === " ") {
-        span.classList.add("space");
-        span.innerHTML = "&nbsp;";
-      } else {
-        span.textContent = ch;
-      }
-      descriptorEl.appendChild(span);
-      descriptorChars.push({ el: span, brightness: 0 });
-    }
+    };
+
+    appendChars(DESCRIPTOR_TEXT, descriptorEl);
+
+    // Email: same reveal treatment, wrapped in a mailto link one line below
+    const emailLink = document.createElement("a");
+    emailLink.href = "mailto:hello@asunder.studio";
+    emailLink.className = "hero-email-inline";
+    appendChars(EMAIL_TEXT, emailLink);
+    descriptorEl.appendChild(emailLink);
 
     const ILLUMINATE_RADIUS = 180;
     const ILLUMINATE_DECAY = 0.025;
@@ -753,14 +766,11 @@ export default function Home() {
         <section className="hero-section">
           <div id="wordmark-wrap" className="wordmark-wrap">
             <div className="studio-descriptor" id="studio-descriptor" />
+            <a href="/letschat-v2/index.html" className="meet-team-btn">
+              Meet the team &rarr;
+            </a>
           </div>
         </section>
-
-        <div className="hero-email-bar">
-          <a href="mailto:hello@asunder.studio" className="hero-email">
-            hello@asunder.studio
-          </a>
-        </div>
       </div>
 
       <div className="cursor-dot" id="cursor-dot" />
