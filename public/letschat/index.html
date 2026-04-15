@@ -35,9 +35,13 @@
     html { height: 100%; overflow: hidden; }
     body {
       position: fixed;
-      inset: 0;
+      top: 0;
+      left: 0;
       width: 100%;
-      height: 100%;
+      /* Fall-through stack: older browsers get vh, modern get svh, JS overrides with visualViewport */
+      height: 100vh;
+      height: 100svh;
+      height: var(--vvh, 100svh);
       padding: 0;
       overflow: hidden;
       overscroll-behavior: none;
@@ -46,12 +50,11 @@
     .phone-frame {
       width: 100%;
       height: 100%;
-      height: 100svh; /* smallest stable viewport — always fits under browser chrome */
       border-radius: 0;
       box-shadow: none;
     }
     .input-bar {
-      /* Clear home indicator / bottom browser toolbar on iOS */
+      /* Clear home indicator / bottom browser toolbar on iOS + Android */
       padding-bottom: max(28px, calc(16px + env(safe-area-inset-bottom)));
     }
   }
@@ -1175,6 +1178,22 @@ chat.addEventListener('click', (e) => {
   e.preventDefault();
   showLanding();
 });
+
+// ---- VISUAL VIEWPORT LOCK (mobile) ----
+// Some mobile browsers (older iOS Chrome, some Android builds) don't shrink
+// 100svh/100dvh correctly when the URL bar is visible. Use the visualViewport
+// API to pin body height to the actually-visible area.
+function setVvh() {
+  const h = (window.visualViewport && window.visualViewport.height) || window.innerHeight;
+  document.documentElement.style.setProperty('--vvh', h + 'px');
+}
+setVvh();
+window.addEventListener('resize', setVvh);
+window.addEventListener('orientationchange', setVvh);
+if (window.visualViewport) {
+  window.visualViewport.addEventListener('resize', setVvh);
+  window.visualViewport.addEventListener('scroll', setVvh);
+}
 
 // Start
 runLoop();
