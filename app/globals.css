@@ -1,0 +1,141 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=Space+Mono:wght@400;700&family=Nunito:wght@900&display=swap');
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  background: #0a0a0a;
+  overflow: hidden;
+  cursor: none;
+  font-family: 'Space Grotesk', sans-serif;
+}
+
+canvas#particle-canvas {
+  position: fixed;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+  z-index: 1;
+}
+
+.studio-descriptor {
+  display: flex;
+  justify-content: center;
+  gap: 0;
+  margin-top: clamp(70px, 10vw, 120px);
+  pointer-events: none;
+  font-size: clamp(0.58rem, 0.87vw, 0.74rem);
+  font-family: 'Space Mono', monospace;
+  font-weight: 400;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  user-select: none;
+  white-space: nowrap;
+}
+
+.studio-descriptor .char {
+  color: rgba(255, 255, 255, 0.0);
+  transition: color 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+  display: inline-block;
+}
+
+.studio-descriptor .char.space {
+  width: 0.35em;
+}
+
+@media (hover: none) and (pointer: coarse) {
+  .studio-descriptor .char {
+    color: rgba(120, 120, 120, 1.0) !important;
+    transition: none;
+  }
+}
+
+.wordmark-wrap {
+  position: relative;
+  z-index: 4;
+  pointer-events: none;
+  user-select: none;
+  text-align: center;
+}
+
+
+@keyframes wordmarkReveal {
+  0% { opacity: 0; }
+  100% { opacity: 1; }
+}
+
+.cursor-dot {
+  position: fixed;
+  width: 8px; height: 8px;
+  background: rgba(255, 255, 255, 0.9);
+  border-radius: 50%;
+  pointer-events: none;
+  z-index: 100;
+  transform: translate(-50%, -50%);
+  mix-blend-mode: difference;
+}
+
+.cursor-ring {
+  position: fixed;
+  width: 40px; height: 40px;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 50%;
+  pointer-events: none;
+  z-index: 100;
+  transform: translate(-50%, -50%);
+  mix-blend-mode: difference;
+  transition: width 0.3s ease, height 0.3s ease, border-color 0.3s ease;
+}
+
+
+@media (max-width: 768px) {
+  body { cursor: auto; }
+  .cursor-dot, .cursor-ring { display: none; }
+  .studio-descriptor { font-size: 0.6rem; letter-spacing: 0.14em; }
+}
+
+@media (hover: none) and (pointer: coarse) {
+  body { cursor: auto; }
+  .cursor-dot, .cursor-ring { display: none !important; }
+}
+
+/* ── Scroll container ── */
+.scroll-container {
+  position: relative;
+  z-index: 6;
+  height: 100vh;
+  overflow: hidden;
+}
+
+/* ── Hero section ── */
+.hero-section {
+  position: relative;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.hero-section .wordmark-wrap {
+  position: relative;
+  left: auto;
+  top: auto;
+  transform: none;
+}
+
+/* ── Grain texture ── */
+.grain-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 999;
+  pointer-events: none;
+  opacity: 0.35;
+  mix-blend-mode: overlay;
+}
