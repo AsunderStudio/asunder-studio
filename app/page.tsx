@@ -766,7 +766,7 @@ export default function Home() {
         <section className="hero-section">
           <div id="wordmark-wrap" className="wordmark-wrap">
             <div className="studio-descriptor" id="studio-descriptor" />
-            <a href="/letschat-v2/index.html" className="meet-team-btn">
+            <a href="/team" className="meet-team-btn">
               Meet the team &rarr;
             </a>
           </div>
