@@ -237,7 +237,8 @@ export default function Home() {
       const aspect = logoImg.naturalHeight / logoImg.naturalWidth;
       const logoH = targetW * aspect;
       const lx = (W - targetW) / 2;
-      const ly = H / 2 - logoH / 2;
+      const BAR_OFFSET = 52;
+      const ly = (H - BAR_OFFSET) / 2 - logoH / 2;
       document.documentElement.style.setProperty("--logo-half-h", `${logoH / 2}px`);
 
       // Draw logo into mask canvas

@@ -133,7 +133,7 @@ canvas#particle-canvas {
 
 .hero-section .wordmark-wrap {
   position: fixed;
-  top: 50%;
+  top: calc(50% - 26px);
   left: 50%;
   transform: translateX(-50%);
   z-index: 6;
@@ -154,7 +154,7 @@ canvas#particle-canvas {
   padding: clamp(14px, 1.6vh, 20px) 16px;
   opacity: 0;
   transform: translateY(100%);
-  animation: emailBarIn 900ms cubic-bezier(0.22, 0.61, 0.36, 1) 3200ms forwards;
+  animation: emailBarIn 900ms cubic-bezier(0.22, 0.61, 0.36, 1) 5200ms forwards;
 }
 
 @keyframes emailBarIn {
