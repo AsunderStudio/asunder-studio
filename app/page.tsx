@@ -3,22 +3,44 @@
 import { useEffect } from "react";
 
 export default function Home() {
+  // Scroll-driven parallax + hero fade
+  useEffect(() => {
+    const canvas = document.getElementById("particle-canvas") as HTMLElement;
+    const wordmark = document.getElementById("wordmark-wrap") as HTMLElement;
+    const onScroll = () => {
+      const s = window.scrollY;
+      const vh = window.innerHeight;
+      const wordmarkFade = Math.max(0, 1 - s / (vh * 0.5));
+      const canvasFade = Math.max(0.35, 1 - s / (vh * 0.7));
+      if (canvas) canvas.style.opacity = String(canvasFade);
+      if (wordmark) wordmark.style.opacity = String(wordmarkFade);
+      document.documentElement.style.setProperty("--parallax-offset", `${s * -0.18}px`);
+    };
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
+
   useEffect(() => {
     const cursorDot = document.getElementById("cursor-dot") as HTMLElement;
     const cursorRing = document.getElementById("cursor-ring") as HTMLElement;
     const descriptorEl = document.getElementById("studio-descriptor") as HTMLElement;
 
     // Build per-character descriptor
-    const DESCRIPTOR_TEXT = "A Creative Studio For The Agentic Era";
+    const DESCRIPTOR_TEXT = "ASUNDER is a creative studio\nfor the post-agency world";
     const descriptorChars: { el: HTMLSpanElement; brightness: number }[] = [];
     for (let i = 0; i < DESCRIPTOR_TEXT.length; i++) {
+      const ch = DESCRIPTOR_TEXT[i];
+      if (ch === "\n") {
+        descriptorEl.appendChild(document.createElement("br"));
+        continue;
+      }
       const span = document.createElement("span");
       span.classList.add("char");
-      if (DESCRIPTOR_TEXT[i] === " ") {
+      if (ch === " ") {
         span.classList.add("space");
         span.innerHTML = "&nbsp;";
       } else {
-        span.textContent = DESCRIPTOR_TEXT[i];
+        span.textContent = ch;
       }
       descriptorEl.appendChild(span);
       descriptorChars.push({ el: span, brightness: 0 });
@@ -65,7 +87,6 @@ export default function Home() {
       prevMouseY = mouseY = t.clientY;
     };
     const onTouchMove = (e: TouchEvent) => {
-      e.preventDefault();
       const t = e.touches[0];
       prevMouseX = mouseX; prevMouseY = mouseY;
       mouseX = t.clientX; mouseY = t.clientY;
@@ -80,7 +101,7 @@ export default function Home() {
     document.addEventListener("mousedown", onMouseDown);
     document.addEventListener("mouseup", onMouseUp);
     document.addEventListener("touchstart", onTouchStart, { passive: true });
-    document.addEventListener("touchmove", onTouchMove, { passive: false });
+    document.addEventListener("touchmove", onTouchMove, { passive: true });
     document.addEventListener("touchend", onTouchEnd, { passive: true });
 
     let rafRing: number;
@@ -123,7 +144,7 @@ export default function Home() {
 
     // Preload logo
     const logoImg = new Image();
-    logoImg.src = "/asunder-logo.png";
+    logoImg.src = "/Black-and-White-Logo-1.png";
 
     // Canvas
     const canvas = document.getElementById("particle-canvas") as HTMLCanvasElement;
@@ -211,37 +232,47 @@ export default function Home() {
       off.width = W; off.height = H;
       const octx = off.getContext("2d")!;
 
-      // Scale logo to fit viewport width with margins
-      const targetW = IS_MOBILE ? Math.min(W * 0.75, 360) : Math.min(W * 0.343, 396);
-      const scale = targetW / logoImg.naturalWidth;
-      const logoH = logoImg.naturalHeight * scale;
+      // Scale logo — square dropcap, smaller than old wide wordmark
+      const targetW = IS_MOBILE ? Math.min(W * 0.58, 260) : Math.min(W * 0.26, 320);
+      const aspect = logoImg.naturalHeight / logoImg.naturalWidth;
+      const logoH = targetW * aspect;
       const lx = (W - targetW) / 2;
       const ly = H / 2 - logoH / 2;
+      document.documentElement.style.setProperty("--logo-half-h", `${logoH / 2}px`);
 
-      // Draw logo into mask canvas — alpha channel becomes the mask
+      // Draw logo into mask canvas
       octx.drawImage(logoImg, lx, ly, targetW, logoH);
 
-      // Mild blur+contrast to smooth aliasing edges into organic blobs
-      const blurAmt = Math.max(1, Math.round(logoH * 0.015));
-      const blobCanvas = document.createElement("canvas");
-      blobCanvas.width = W; blobCanvas.height = H;
-      const bctx = blobCanvas.getContext("2d")!;
-      bctx.filter = `blur(${blurAmt}px)`;
-      bctx.drawImage(off, 0, 0);
-      bctx.filter = "none";
-      bctx.globalCompositeOperation = "source-over";
-      bctx.filter = `blur(${Math.round(blurAmt * 0.5)}px) contrast(4)`;
-      bctx.drawImage(blobCanvas, 0, 0);
-      bctx.filter = "none";
-      bctx.globalCompositeOperation = "source-over";
+      // Detect if image is opaque (white bg) by sampling alpha from raw draw
+      const rawData = octx.getImageData(0, 0, W, H).data;
+      let totalAlpha = 0;
+      const sampleCount = Math.min(W * H, 4000);
+      const sampleStep = Math.floor(W * H / sampleCount);
+      for (let i = 0; i < sampleCount; i++) totalAlpha += rawData[i * sampleStep * 4 + 3];
+      const isOpaqueImage = (totalAlpha / sampleCount) > 240;
 
-
-      const imgData = bctx.getImageData(0, 0, W, H);
-      const data = imgData.data;
       textW = W; textH = H;
       textMask = new Uint8Array(W * H);
-      for (let i = 0; i < W * H; i++) {
-        textMask[i] = data[i * 4 + 3];
+
+      if (isOpaqueImage) {
+        // White background image: use inverted luminance directly — skip blob pipeline
+        for (let i = 0; i < W * H; i++) {
+          const r = rawData[i * 4], g = rawData[i * 4 + 1], b = rawData[i * 4 + 2];
+          const lum = 0.299 * r + 0.587 * g + 0.114 * b;
+          textMask[i] = Math.round(255 - lum);
+        }
+      } else {
+        // Transparent image: light 1px blur to smooth pixel edges, preserve fine detail
+        const blobCanvas = document.createElement("canvas");
+        blobCanvas.width = W; blobCanvas.height = H;
+        const bctx = blobCanvas.getContext("2d")!;
+        bctx.filter = "blur(1px)";
+        bctx.drawImage(off, 0, 0);
+        bctx.filter = "none";
+        const imgData = bctx.getImageData(0, 0, W, H).data;
+        for (let i = 0; i < W * H; i++) {
+          textMask[i] = imgData[i * 4 + 3];
+        }
       }
 
       textDist = new Float32Array(W * H);
@@ -368,6 +399,20 @@ export default function Home() {
       const waveEaseOut = 1 - Math.pow(1 - waveT, 2.5);
       const waveFront = 1.3 - waveEaseOut * 1.6;
 
+      // Intro: background parts outward, logo fades in
+      const INTRO_DURATION = 3000;
+      const introT = Math.min(1, elapsed / INTRO_DURATION);
+      const introEase = 1 - Math.pow(1 - introT, 3);
+      const logoFadeT = Math.max(0, Math.min(1, (elapsed - 600) / 2200));
+      const logoFadeEase = 1 - Math.pow(1 - logoFadeT, 2.5);
+
+      // Detail reveal: thick A strokes first (-6 = 6px from any edge), then floral detail eases in
+      const DETAIL_START = 800;
+      const DETAIL_DURATION = 2400;
+      const detailT = Math.max(0, Math.min(1, (elapsed - DETAIL_START) / DETAIL_DURATION));
+      const detailEase = 1 - Math.pow(1 - detailT, 2.5);
+      const detailCutoff = -6 * (1 - detailEase); // -6 → 0
+
       const warpMult = elapsed > 400 ? Math.min(1, (elapsed - 400) / 1500) : 0;
 
       const cursorR = isMouseDown ? CURSOR_RADIUS * 1.4 : CURSOR_RADIUS;
@@ -468,7 +513,7 @@ export default function Home() {
             // Organic moat: boundary distorts with noise
             const logoD = textDistAt(finalX, finalY);
             const moatNoise = (noise2D(baseX * 0.012 + t * 0.4, baseY * 0.012 + t * 0.25) + 1) * 0.5;
-            const dynamicMoat = 8.8 + moatNoise * 19.8;
+            const dynamicMoat = (8.8 + moatNoise * 19.8) * introEase;
             if (logoD < dynamicMoat) continue;
 
             const snx = baseX * SIZE_SCALE, sny = baseY * SIZE_SCALE;
@@ -547,9 +592,10 @@ export default function Home() {
           const by = row * LOGO_SPACING;
 
           // Only draw inside the logo mask
-          const ix = Math.round(bx), iy = Math.round(by);
-          if (ix < 0 || ix >= textW || iy < 0 || iy >= textH) continue;
-          if (textMask![iy * textW + ix] < 120) continue;
+          if (logoFadeEase < 0.01) continue;
+          const distHere = textDistAt(bx, by);
+          if (distHere >= 0) continue;
+          if (distHere > detailCutoff) continue;
 
           // Slight noise warp so it breathes
           const lnx = bx * 0.008, lny = by * 0.008;
@@ -559,10 +605,7 @@ export default function Home() {
           const fy = by + lwarpY;
 
           // Skip if warped outside logo
-          const fix = Math.round(fx), fiy = Math.round(fy);
-          if (fix < 0 || fix >= textW || fiy < 0 || fiy >= textH) continue;
-          const fMask = textMask![fiy * textW + fix];
-          if (fMask < 80) continue;
+          if (textDistAt(fx, fy) > detailCutoff) continue;
 
           // Cursor interaction
           const cdx2 = fx - mouseX, cdy2 = fy - mouseY;
@@ -576,7 +619,7 @@ export default function Home() {
           const logoRadius = 0.8 + logoCI * 0.4;
 
           const logoOpNoise = (noise2D(bx * 0.003 + opT, by * 0.003 + opT * 0.7) + 1) * 0.5;
-          let logoOpacity = 0.7 + logoOpNoise * 0.3;
+          let logoOpacity = (0.7 + logoOpNoise * 0.3) * logoFadeEase;
 
           // Wave reveal
           if (elapsed < WAVE_DURATION + 600) {
@@ -711,6 +754,12 @@ export default function Home() {
             <div className="studio-descriptor" id="studio-descriptor" />
           </div>
         </section>
+
+        <div className="hero-email-bar">
+          <a href="mailto:hello@asunder.studio" className="hero-email">
+            hello@asunder.studio
+          </a>
+        </div>
       </div>
 
       <div className="cursor-dot" id="cursor-dot" />

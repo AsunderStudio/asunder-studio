@@ -2,7 +2,15 @@
 @tailwind components;
 @tailwind utilities;
 
-@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=Space+Mono:wght@400;700&family=Nunito:wght@900&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=Space+Mono:wght@400;700&family=Nunito:wght@900&family=UnifrakturMaguntia&display=swap');
+
+@font-face {
+  font-family: 'Alagard';
+  src: url('/fonts/alagard.ttf') format('truetype');
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}
 
 * { margin: 0; padding: 0; box-sizing: border-box; }
 
@@ -12,7 +20,8 @@ html {
 
 body {
   background: #0a0a0a;
-  overflow: hidden;
+  overflow-x: hidden;
+  overflow-y: auto;
   cursor: none;
   font-family: 'Space Grotesk', sans-serif;
 }
@@ -25,10 +34,9 @@ canvas#particle-canvas {
 }
 
 .studio-descriptor {
-  display: flex;
-  justify-content: center;
-  gap: 0;
-  margin-top: clamp(70px, 10vw, 120px);
+  display: block;
+  text-align: center;
+  margin-top: calc(var(--logo-half-h, 160px) + 36px);
   pointer-events: none;
   font-size: clamp(0.58rem, 0.87vw, 0.74rem);
   font-family: 'Space Mono', monospace;
@@ -36,7 +44,7 @@ canvas#particle-canvas {
   letter-spacing: 0.18em;
   text-transform: uppercase;
   user-select: none;
-  white-space: nowrap;
+  line-height: 1.4;
 }
 
 .studio-descriptor .char {
@@ -109,8 +117,8 @@ canvas#particle-canvas {
 .scroll-container {
   position: relative;
   z-index: 6;
-  height: 100vh;
-  overflow: hidden;
+  height: auto;
+  overflow: visible;
 }
 
 /* ── Hero section ── */
@@ -124,11 +132,53 @@ canvas#particle-canvas {
 }
 
 .hero-section .wordmark-wrap {
-  position: relative;
-  left: auto;
-  top: auto;
-  transform: none;
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 6;
 }
+
+/* ── Hero email bar ── */
+.hero-email-bar {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 200;
+  background: #000;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: clamp(14px, 1.6vh, 20px) 16px;
+  opacity: 0;
+  transform: translateY(100%);
+  animation: emailBarIn 900ms cubic-bezier(0.22, 0.61, 0.36, 1) 3200ms forwards;
+}
+
+@keyframes emailBarIn {
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.hero-email {
+  font-family: 'Space Mono', monospace;
+  font-size: clamp(0.58rem, 0.87vw, 0.74rem);
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.85);
+  text-decoration: none;
+  transition: color 0.3s ease;
+  position: relative;
+  z-index: 1;
+}
+
+.hero-email:hover { color: #fff; }
+
+@media (hover: none) and (pointer: coarse) {
+  .hero-email { color: #fff; }
+}
+
 
 /* ── Grain texture ── */
 .grain-overlay {
