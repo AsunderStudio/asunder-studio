@@ -24,11 +24,14 @@ export default function Home() {
     const cursorDot = document.getElementById("cursor-dot") as HTMLElement;
     const cursorRing = document.getElementById("cursor-ring") as HTMLElement;
     const descriptorEl = document.getElementById("studio-descriptor") as HTMLElement;
+    const meetBtn = document.getElementById("meet-team-btn") as HTMLElement;
 
     // Build per-character descriptor
     const DESCRIPTOR_TEXT = "ASUNDER IS A CREATIVE STUDIO\nBUILT FOR THE POST AGENCY ERA";
     const EMAIL_TEXT = "hello@asunder.studio";
-    const descriptorChars: { el: HTMLSpanElement; brightness: number }[] = [];
+    const descriptorChars: { el: HTMLSpanElement; brightness: number; original: string; glitchUntil: number }[] = [];
+    const btnChars: { el: HTMLSpanElement; original: string; glitchUntil: number }[] = [];
+    const GLITCH_POOL = '!@#$%/?|~^<>[]{}░▒▓✦✧⊕⊗';
 
     const appendChars = (text: string, parent: HTMLElement) => {
       for (let i = 0; i < text.length; i++) {
@@ -46,7 +49,7 @@ export default function Home() {
           span.textContent = ch;
         }
         parent.appendChild(span);
-        descriptorChars.push({ el: span, brightness: 0 });
+        descriptorChars.push({ el: span, brightness: 0, original: ch === " " ? " " : ch, glitchUntil: 0 });
       }
     };
 
@@ -58,6 +61,19 @@ export default function Home() {
     emailLink.className = "hero-email-inline";
     appendChars(EMAIL_TEXT, emailLink);
     descriptorEl.appendChild(emailLink);
+
+    // Button: split into glitch-able spans
+    const btnEl = document.getElementById("meet-team-btn");
+    if (btnEl) {
+      const btnText = "Eavesdrop →";
+      btnEl.textContent = "";
+      for (const ch of btnText) {
+        const span = document.createElement("span");
+        span.textContent = ch;
+        btnEl.appendChild(span);
+        btnChars.push({ el: span, original: ch, glitchUntil: 0 });
+      }
+    }
 
     const ILLUMINATE_RADIUS = 180;
     const ILLUMINATE_DECAY = 0.025;
@@ -409,15 +425,22 @@ export default function Home() {
       const t = time * WARP_SPEED;
       const st = time * SIZE_SPEED;
 
+      // Wordmark wave — starts immediately
       const waveT = Math.min(elapsed / WAVE_DURATION, 1);
       const waveEaseOut = 1 - Math.pow(1 - waveT, 2.5);
       const waveFront = 1.3 - waveEaseOut * 1.6;
 
-      // Intro: background parts outward, logo fades in
+      // Background wave — delayed until wordmark is established
+      const BG_WAVE_DELAY = 800;
+      const bgWaveT = Math.min(Math.max(0, elapsed - BG_WAVE_DELAY) / WAVE_DURATION, 1);
+      const bgWaveEaseOut = 1 - Math.pow(1 - bgWaveT, 2.5);
+      const bgWaveFront = 1.3 - bgWaveEaseOut * 1.6;
+
+      // Intro: background moat expands, logo fades in immediately
       const INTRO_DURATION = 1500;
       const introT = Math.min(1, elapsed / INTRO_DURATION);
       const introEase = 1 - Math.pow(1 - introT, 3);
-      const logoFadeT = Math.max(0, Math.min(1, (elapsed - 200) / 1200));
+      const logoFadeT = Math.max(0, Math.min(1, elapsed / 700));
       const logoFadeEase = 1 - Math.pow(1 - logoFadeT, 2.5);
 
       // Detail reveal: thick A strokes first (-6 = 6px from any edge), then floral detail eases in
@@ -551,7 +574,7 @@ export default function Home() {
             const opNoise = (noise2D(baseX * 0.002 + opT, baseY * 0.002 + opT * 0.8) + 1) * 0.5;
             let opacity = 0.5 + opNoise * 0.5;
 
-            if (elapsed < WAVE_DURATION + 600) {
+            if (elapsed < WAVE_DURATION + BG_WAVE_DELAY + 600) {
               let dotNorm: number, waveNoise: number;
               if (MODE.waveDir === "top") {
                 dotNorm = baseY / H;
@@ -565,7 +588,7 @@ export default function Home() {
                 dotNorm = baseX / W;
                 waveNoise = noise2D(baseY * 0.006, 42) * 0.06;
               }
-              const distPastWave = (dotNorm + waveNoise) - waveFront;
+              const distPastWave = (dotNorm + waveNoise) - bgWaveFront;
               const waveAlpha = Math.max(0, Math.min(1, distPastWave / WAVE_FEATHER));
               opacity *= waveAlpha;
               radius *= 0.4 + waveAlpha * 0.6;
@@ -693,7 +716,15 @@ export default function Home() {
         }
       }
 
-      if (elapsed > WAVE_DURATION * 0.35 && !isTouchDevice) {
+      // Button fades in on the same clock as subcopy
+      if (meetBtn) {
+        const btnT = Math.max(0, Math.min(1, (elapsed - 750) / 600));
+        const btnEase = 1 - Math.pow(1 - btnT, 2);
+        meetBtn.style.opacity = String(btnEase);
+        meetBtn.style.transform = `translateY(${(1 - btnEase) * 6}px)`;
+      }
+
+      if (elapsed > 750 && !isTouchDevice) {
         for (let i = 0; i < descriptorChars.length; i++) {
             const ch = descriptorChars[i];
             const rect = ch.el.getBoundingClientRect();
@@ -711,14 +742,41 @@ export default function Home() {
             } else {
               ch.brightness = Math.max(0, ch.brightness - ILLUMINATE_DECAY);
             }
+            // Glitch: randomly swap to a noise glyph for a short window
+            if (ch.original !== " " && Math.random() < 0.0008) {
+              ch.glitchUntil = time + 60 + Math.random() * 120;
+              ch.el.textContent = GLITCH_POOL[Math.floor(Math.random() * GLITCH_POOL.length)];
+            } else if (ch.glitchUntil > 0 && time >= ch.glitchUntil) {
+              ch.glitchUntil = 0;
+              ch.el.textContent = ch.original;
+            }
+
             const bv = ch.brightness;
-            if (bv > 0.001) {
+            const isGlitching = ch.glitchUntil > 0 && time < ch.glitchUntil;
+            if (isGlitching) {
+              ch.el.style.color = `rgba(255,255,255,${Math.max(bv, 0.35)})`;
+            } else if (bv > 0.001) {
               ch.el.style.color = `rgba(255,255,255,${bv})`;
             } else {
               ch.el.style.color = "rgba(255,255,255,0.0)";
             }
           }
         }
+      // Button glitch — starts after button is visible (~2400ms CSS delay)
+      if (elapsed > 700) {
+        for (let i = 0; i < btnChars.length; i++) {
+          const bc = btnChars[i];
+          if (bc.original === " " || bc.original === "→") continue;
+          if (Math.random() < 0.0010) {
+            bc.glitchUntil = time + 60 + Math.random() * 120;
+            bc.el.textContent = GLITCH_POOL[Math.floor(Math.random() * GLITCH_POOL.length)];
+          } else if (bc.glitchUntil > 0 && time >= bc.glitchUntil) {
+            bc.glitchUntil = 0;
+            bc.el.textContent = bc.original;
+          }
+        }
+      }
+
       mouseVX *= 0.88;
       mouseVY *= 0.88;
 
@@ -774,8 +832,8 @@ export default function Home() {
         <section className="hero-section">
           <div id="wordmark-wrap" className="wordmark-wrap">
             <div className="studio-descriptor" id="studio-descriptor" />
-            <a href="/team" className="meet-team-btn">
-              Eavesdrop &rarr;
+            <a href="/team" className="meet-team-btn" id="meet-team-btn">
+              Eavesdrop →
             </a>
           </div>
         </section>

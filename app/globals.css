@@ -205,7 +205,6 @@ canvas#particle-canvas {
   -webkit-backdrop-filter: blur(4px);
   transition: color 0.25s ease, border-color 0.25s ease, background 0.25s ease;
   opacity: 0;
-  animation: heroFadeIn 700ms cubic-bezier(0.22, 0.61, 0.36, 1) 6500ms forwards;
   pointer-events: auto;
 }
 .meet-team-btn:hover {
