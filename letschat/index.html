@@ -1,0 +1,1178 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Chat</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap');
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    background: #0a0a0a;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    padding: 20px;
+  }
+
+  .phone-frame {
+    width: 390px;
+    height: 844px;
+    max-width: 100%;
+    background: #0a0a0a;
+    border-radius: 40px;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 0 0 3px #1a1a1a, 0 0 0 6px #000000, 0 20px 60px rgba(0,0,0,0.6);
+    position: relative;
+  }
+  @media (max-width: 430px) {
+    body { padding: 0; background: #0a0a0a; }
+    .phone-frame {
+      width: 100%;
+      height: 100vh;
+      height: 100dvh;
+      border-radius: 0;
+      box-shadow: none;
+    }
+  }
+
+  .status-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 14px 24px 0;
+    color: #ffffff;
+    font-size: 15px;
+    font-weight: 600;
+    background: #161616;
+    flex-shrink: 0;
+  }
+  .status-bar .right { display: flex; gap: 6px; align-items: center; }
+  .status-bar svg { width: 18px; height: 18px; fill: #ffffff; }
+
+  .chat-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 16px 12px;
+    background: #161616;
+    flex-shrink: 0;
+    border-bottom: 1px solid rgba(255,255,255,0.06);
+  }
+  .back-arrow { color: #ffffff; font-size: 22px; cursor: pointer; }
+  .avatar-group {
+    width: 40px; height: 40px; border-radius: 50%;
+    background: linear-gradient(135deg, #555555, #aaaaaa);
+    display: flex; align-items: center; justify-content: center;
+    color: #fff; font-weight: 700; font-size: 13px; flex-shrink: 0;
+    letter-spacing: -1px;
+  }
+  .contact-info { flex: 1; }
+  .contact-name { color: #ffffff; font-size: 16px; font-weight: 600; }
+  .contact-status { color: #9e9e9e; font-size: 12px; transition: color 0.3s; }
+  .contact-status.typing { color: #ffffff; }
+  .header-icons { display: flex; gap: 20px; }
+  .header-icons svg { width: 22px; height: 22px; fill: #cccccc; }
+
+  .chat-area {
+    flex: 1;
+    overflow-y: auto;
+    padding: 8px 12px 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    background: #0a0a0a;
+    background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%231a1a1a' fill-opacity='0.6'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+  }
+  .chat-area::-webkit-scrollbar { width: 4px; }
+  .chat-area::-webkit-scrollbar-thumb { background: #333333; border-radius: 4px; }
+
+  .date-divider {
+    align-self: center;
+    background: #1e1e1e;
+    color: #9e9e9e;
+    font-size: 12px;
+    padding: 5px 12px;
+    border-radius: 8px;
+    margin: 8px 0 4px;
+    opacity: 0;
+    transform: scale(0.8);
+    transition: all 0.3s ease;
+  }
+  .date-divider.visible { opacity: 1; transform: scale(1); }
+
+  .msg {
+    max-width: 82%;
+    padding: 4px 10px 2px;
+    border-radius: 8px;
+    position: relative;
+    line-height: 1.35;
+    font-size: 14.5px;
+    word-wrap: break-word;
+    opacity: 0;
+    transform: translateY(16px) scale(0.95);
+    transition: all 0.35s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  .msg.visible { opacity: 1; transform: translateY(0) scale(1); }
+  .msg.fade-out, .date-divider.fade-out, .cluster-gap.fade-out {
+    opacity: 0 !important;
+    transform: translateY(-10px) scale(0.95) !important;
+    transition: all 0.4s ease-in;
+  }
+  /* Frances = left grey */
+  .msg.frances {
+    align-self: flex-start;
+    background: #161616;
+    color: #ffffff;
+    border-top-left-radius: 0;
+    border-top-right-radius: 8px;
+  }
+  /* Joseph = right green */
+  .msg.joseph {
+    align-self: flex-end;
+    background: #2a2a2a;
+    color: #ffffff;
+    border-top-right-radius: 0;
+    border-top-left-radius: 8px;
+    padding-top: 6px;
+  }
+  /* User = right purple-ish to distinguish from Joseph */
+  .msg.user {
+    align-self: flex-end;
+    background: #3a3a3a;
+    color: #ffffff;
+    border-top-right-radius: 0;
+    border-top-left-radius: 8px;
+    padding-top: 6px;
+  }
+
+  /* Sender name label */
+  .msg .sender-name {
+    font-size: 12.5px;
+    font-weight: 600;
+    margin-bottom: 1px;
+    line-height: 1.3;
+  }
+  .msg .sender-name.frances { color: #ffd84d; } /* yellow */
+  .msg .sender-name.joseph  { color: #4ade80; } /* green */
+  .msg .sender-name.user    { color: #c4ff3d; } /* lime (unchanged) */
+
+  .msg .text { margin-bottom: 2px; }
+  .msg .meta {
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    gap: 4px;
+    padding-top: 1px;
+  }
+  .msg .time {
+    font-size: 11px;
+    color: rgba(255,255,255,0.45);
+    white-space: nowrap;
+  }
+  .msg.joseph .ticks, .msg.user .ticks { font-size: 14px; color: #ffffff; line-height: 1; }
+  .msg.joseph .ticks.single, .msg.user .ticks.single { color: rgba(255,255,255,0.35); }
+
+  /* Right-side tails (Joseph + User) */
+  .msg.joseph.tail::before {
+    content: '';
+    position: absolute;
+    top: 0; right: -8px;
+    width: 0; height: 0;
+    border-left: 8px solid #2a2a2a;
+    border-bottom: 8px solid transparent;
+  }
+  .msg.user.tail::before {
+    content: '';
+    position: absolute;
+    top: 0; right: -8px;
+    width: 0; height: 0;
+    border-left: 8px solid #3a3a3a;
+    border-bottom: 8px solid transparent;
+  }
+  /* Left-side tail (Frances) */
+  .msg.frances.tail::before {
+    content: '';
+    position: absolute;
+    top: 0; left: -8px;
+    width: 0; height: 0;
+    border-right: 8px solid #161616;
+    border-bottom: 8px solid transparent;
+  }
+
+  .msg.joseph.tail, .msg.user.tail { margin-right: 8px; }
+  .msg.frances.tail { margin-left: 8px; }
+  .msg:not(.tail).joseph, .msg:not(.tail).user { margin-right: 8px; }
+  .msg:not(.tail).frances { margin-left: 8px; }
+
+  .cluster-gap { height: 6px; }
+
+  .typing-indicator {
+    margin-left: 8px;
+    background: #161616;
+    padding: 10px 14px;
+    border-radius: 8px;
+    border-top-left-radius: 0;
+    display: none;
+    gap: 5px;
+    align-items: center;
+    align-self: flex-start;
+    position: relative;
+    opacity: 0;
+    transform: translateY(10px);
+    transition: all 0.25s ease;
+  }
+  .typing-indicator::before {
+    content: '';
+    position: absolute;
+    top: 0; left: -8px;
+    width: 0; height: 0;
+    border-right: 8px solid #161616;
+    border-bottom: 8px solid transparent;
+  }
+  /* Joseph types on right */
+  .typing-indicator.right {
+    align-self: flex-end;
+    margin-left: 0;
+    margin-right: 8px;
+    background: #2a2a2a;
+    border-top-left-radius: 8px;
+    border-top-right-radius: 0;
+  }
+  .typing-indicator.right::before {
+    left: auto;
+    right: -8px;
+    border-right: none;
+    border-left: 8px solid #2a2a2a;
+  }
+  .typing-indicator.right .dot { background: rgba(255,255,255,0.55); }
+  .typing-indicator.visible { display: flex; opacity: 1; transform: translateY(0); }
+  .typing-indicator .dot {
+    width: 8px; height: 8px; border-radius: 50%;
+    background: #9e9e9e;
+    animation: typingBounce 1.4s ease-in-out infinite;
+  }
+  .typing-indicator .dot:nth-child(2) { animation-delay: 0.2s; }
+  .typing-indicator .dot:nth-child(3) { animation-delay: 0.4s; }
+
+  @keyframes typingBounce {
+    0%, 60%, 100% { transform: translateY(0); opacity: 0.4; }
+    30% { transform: translateY(-6px); opacity: 1; }
+  }
+
+  .emoji-react {
+    font-size: 20px;
+    position: absolute;
+    bottom: -12px;
+    border-radius: 50%;
+    background: #161616;
+    padding: 1px 3px;
+    line-height: 1;
+    border: 2px solid #0a0a0a;
+    opacity: 0;
+    transform: scale(0);
+    transition: all 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+  .emoji-react.visible { opacity: 1; transform: scale(1); }
+  .msg.joseph .emoji-react, .msg.user .emoji-react { left: 4px; }
+  .msg.frances .emoji-react { right: 4px; }
+
+  /* Email CTA button inside a message */
+  .cta-btn {
+    display: inline-block;
+    padding: 8px 18px;
+    background: #ffffff;
+    color: #000000;
+    border-radius: 20px;
+    font-size: 13.5px;
+    font-weight: 600;
+    text-decoration: none;
+    cursor: pointer;
+    transition: background 0.2s;
+  }
+  .cta-btn:hover { background: #cccccc; }
+  .cta-wrap { margin-top: 8px; }
+
+  /* Landing overlay */
+  .landing {
+    position: absolute;
+    inset: 0;
+    background: #0a0a0a;
+    color: #ffffff;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    padding: 40px 32px;
+    z-index: 50;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.5s ease;
+  }
+  .landing.visible { opacity: 1; pointer-events: auto; }
+  .landing-close {
+    position: absolute;
+    top: 18px;
+    right: 22px;
+    background: none;
+    border: none;
+    color: #9e9e9e;
+    font-size: 26px;
+    line-height: 1;
+    cursor: pointer;
+    padding: 4px 8px;
+    transition: color 0.2s;
+  }
+  .landing-close:hover { color: #ffffff; }
+  .landing h1 {
+    font-size: 42px;
+    font-weight: 600;
+    letter-spacing: -0.02em;
+    margin-bottom: 24px;
+    color: #cccccc;
+  }
+  .landing .logo {
+    display: block;
+    width: auto;
+    height: 48px;
+    max-width: 80%;
+    margin-bottom: 24px;
+  }
+  .landing p {
+    font-size: 16px;
+    line-height: 1.55;
+    margin-bottom: 18px;
+    color: #cccccc;
+  }
+  .landing p.lede { font-size: 18px; color: #ffffff; font-weight: 500; }
+  .landing .ctas {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-top: 28px;
+  }
+  .landing .btn {
+    display: block;
+    padding: 14px 20px;
+    border-radius: 999px;
+    text-align: center;
+    font-size: 15px;
+    font-weight: 600;
+    text-decoration: none;
+    transition: background 0.2s, transform 0.1s, border-color 0.2s, color 0.2s;
+  }
+  .landing .btn.primary {
+    background: #ffffff;
+    color: #000000;
+  }
+  .landing .btn.primary:hover { background: #cccccc; }
+  .landing .btn.primary:active { transform: scale(0.98); }
+  .landing .btn.secondary {
+    background: transparent;
+    color: #ffffff;
+    border: 1px solid rgba(255,255,255,0.18);
+  }
+  .landing .btn.secondary:hover {
+    border-color: #cccccc;
+    color: #cccccc;
+  }
+  .landing .btn .sub {
+    display: block;
+    font-size: 12px;
+    font-weight: 400;
+    opacity: 0.7;
+    margin-top: 2px;
+  }
+
+  .input-bar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 10px 28px;
+    background: #161616;
+    flex-shrink: 0;
+  }
+  .input-field {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: #1a1a1a;
+    border-radius: 24px;
+    padding: 8px 14px;
+  }
+  .input-field svg { width: 24px; height: 24px; fill: #9e9e9e; flex-shrink: 0; cursor: pointer; }
+  .input-field input {
+    flex: 1;
+    background: none;
+    border: none;
+    outline: none;
+    color: #ffffff;
+    font-size: 15px;
+    font-family: inherit;
+  }
+  .input-field input::placeholder { color: #9e9e9e; }
+
+  /* Periodic nudge — hidden for 10 s, fades in with a shimmer, visible ~3 s, fades out.
+     Subtle reminder that you can type; should not distract from the chat. */
+  .input-field { position: relative; }
+  .fake-placeholder {
+    position: absolute;
+    left: 48px; /* past emoji icon + gap */
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 15px;
+    font-family: inherit;
+    pointer-events: none;
+    white-space: nowrap;
+    color: #9e9e9e;
+    background-image: linear-gradient(90deg,
+      #9e9e9e 0%, #9e9e9e 35%,
+      #ffffff 50%,
+      #9e9e9e 65%, #9e9e9e 100%);
+    background-size: 250% 100%;
+    background-position: 150% 0;
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    opacity: 0;
+    animation: nudge-shimmer 14s ease-in-out infinite;
+  }
+  /* Timeline (14 s total):
+       0 – 10 s  hidden
+       10 – 10.3 s  fade in
+       10.3 – 12.5 s  shimmer sweep
+       12.5 – 13 s  hold visible
+       13 – 13.3 s  fade out
+       13.3 – 14 s  hidden (before loop) */
+  @keyframes nudge-shimmer {
+    0%, 71.4%   { opacity: 0; background-position: 150% 0; }
+    73.6%       { opacity: 1; background-position: 150% 0; }
+    89.3%       { opacity: 1; background-position: -150% 0; }
+    92.9%       { opacity: 1; background-position: -150% 0; }
+    95%, 100%   { opacity: 0; background-position: -150% 0; }
+  }
+  /* Stop the nudge the moment the user engages */
+  .input-field:focus-within .fake-placeholder,
+  .input-field.has-value .fake-placeholder {
+    animation: none;
+    opacity: 0;
+  }
+  .input-field:has(input:disabled) .fake-placeholder { display: none; }
+  .send-btn {
+    width: 48px; height: 48px; border-radius: 50%;
+    background: #ffffff;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0; cursor: pointer;
+    transition: background 0.2s, transform 0.15s;
+    border: none;
+    outline: none;
+  }
+  .send-btn:hover { background: #00c49a; }
+  .send-btn:active { transform: scale(0.92); }
+  .send-btn svg { width: 22px; height: 22px; fill: #000000; }
+</style>
+</head>
+<body>
+
+<div class="phone-frame">
+  <div class="status-bar">
+    <span id="status-clock"></span>
+    <div class="right">
+      <svg viewBox="0 0 24 24"><path d="M1 9l2 2c4.97-4.97 13.03-4.97 18 0l2-2C16.93 2.93 7.08 2.93 1 9zm8 8l3 3 3-3c-1.65-1.66-4.34-1.66-6 0zm-4-4l2 2c2.76-2.76 7.24-2.76 10 0l2-2C15.14 9.14 8.87 9.14 5 13z"/></svg>
+      <svg viewBox="0 0 24 24"><path d="M15.67 4H14V2h-4v2H8.33C7.6 4 7 4.6 7 5.33v15.34C7 21.4 7.6 22 8.33 22h7.34c.73 0 1.33-.6 1.33-1.33V5.33C17 4.6 16.4 4 15.67 4z"/></svg>
+    </div>
+  </div>
+
+  <div class="chat-header">
+    <div class="back-arrow">&lsaquo;</div>
+    <div class="avatar-group">F&J</div>
+    <div class="contact-info">
+      <div class="contact-name">Frances & Joseph</div>
+      <div class="contact-status" id="contactStatus">Frances, Joseph</div>
+    </div>
+    <div class="header-icons">
+      <svg viewBox="0 0 24 24"><path d="M15 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm-9-2V7H4v3H1v2h3v3h2v-3h3v-2H6zm9 4c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>
+      <svg viewBox="0 0 24 24"><path d="M12 8c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm0 2c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm0 6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z"/></svg>
+    </div>
+  </div>
+
+  <div class="chat-area" id="chat">
+    <div class="typing-indicator" id="typingIndicator">
+      <div class="dot"></div>
+      <div class="dot"></div>
+      <div class="dot"></div>
+    </div>
+  </div>
+
+  <div class="landing" id="landing" aria-hidden="true">
+    <button class="landing-close" id="landingClose" aria-label="Close">&times;</button>
+    <img class="logo" src="asunder-logo-white.png" alt="Asunder">
+
+    <p class="lede">A creative consultancy for the post-agency world.</p>
+    <p>By matching proven talent with emerging technology, we create outstanding results for ambitious brands.</p>
+    <div class="ctas">
+      <a class="btn primary" id="landingEmail" href="mailto:hello@asunderstudio.com">Say hello &rarr;<span class="sub">hello@asunderstudio.com</span></a>
+      <a class="btn secondary" id="landingCall" href="#" target="_blank" rel="noopener">Book a 20-min call</a>
+    </div>
+  </div>
+
+  <div class="input-bar">
+    <div class="input-field">
+      <svg viewBox="0 0 24 24"><path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm3.5-9c.83 0 1.5-.67 1.5-1.5S16.33 8 15.5 8 14 8.67 14 9.5s.67 1.5 1.5 1.5zm-7 0c.83 0 1.5-.67 1.5-1.5S9.33 8 8.5 8 7 8.67 7 9.5 7.67 11 8.5 11zm3.5 6.5c2.33 0 4.31-1.46 5.11-3.5H6.89c.8 2.04 2.78 3.5 5.11 3.5z"/></svg>
+      <input type="text" id="userInput" placeholder="" autocomplete="off">
+      <span class="fake-placeholder" id="fakePlaceholder">say something...</span>
+      <svg viewBox="0 0 24 24"><path d="M16.5 6v11.5c0 2.21-1.79 4-4 4s-4-1.79-4-4V5c0-1.38 1.12-2.5 2.5-2.5s2.5 1.12 2.5 2.5v10.5c0 .55-.45 1-1 1s-1-.45-1-1V6H10v9.5c0 1.38 1.12 2.5 2.5 2.5s2.5-1.12 2.5-2.5V5c0-2.21-1.79-4-4-4S7 2.79 7 5v12.5c0 3.04 2.46 5.5 5.5 5.5s5.5-2.46 5.5-5.5V6h-1.5z"/></svg>
+    </div>
+    <button class="send-btn" id="sendBtn">
+      <svg viewBox="0 0 24 24"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
+    </button>
+  </div>
+</div>
+
+<script>
+// ---- CONFIG ----
+const EMAIL = 'hello@asunderstudio.com'; // change this
+const CALENDLY_URL = '#'; // TODO: replace with real booking link
+
+// F = Frances (business lead), J = Joseph (creative director)
+const conversation = [
+  { type: 'divider', text: (() => { const d = new Date(); return d.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' }).toUpperCase(); })() },
+
+  { from: 'joseph', tail: true,  text: 'just got out of a client call where they asked me to make the logo "louder but also quiet"', time: '9:14 AM' },
+  { from: 'joseph', tail: false, text: 'i said "so like a library fire" and nobody laughed', time: '9:14 AM' },
+  { type: 'gap' },
+
+  { from: 'frances', tail: true,  text: 'was this the dog food people', time: '9:15 AM' },
+  { type: 'gap' },
+
+  { from: 'joseph', tail: true,  text: 'they described their brand as "patagonia meets willy wonka"', time: '9:16 AM' },
+  { from: 'joseph', tail: false, text: 'for kibble. luxury kibble.', time: '9:16 AM' },
+  { type: 'gap' },
+
+  { from: 'frances', tail: true,  text: 'there is no luxury kibble joseph', time: '9:16 AM', emoji: '💀' },
+  { type: 'gap' },
+
+  { from: 'joseph', tail: true,  text: 'there is now and it needs to whisper-scream apparently', time: '9:17 AM' },
+  { from: 'joseph', tail: false, text: 'they also asked if chatgpt could do it for free', time: '9:17 AM' },
+  { type: 'gap' },
+
+  { from: 'frances', tail: true,  text: 'well while you were doing that i lost the Finley pitch', time: '9:18 AM' },
+  { from: 'frances', tail: false, text: 'they picked an agency that put 11 people on the zoom. the client said it felt "more robust"', time: '9:18 AM' },
+  { type: 'gap' },
+
+  { from: 'joseph', tail: true,  text: 'robust. a word for bridges and salad bowls. not creative strategy', time: '9:19 AM' },
+  { type: 'gap' },
+
+  { from: 'frances', tail: true,  text: 'nine of the eleven were just nodding. it was like a metronome factory', time: '9:19 AM' },
+  { type: 'gap' },
+
+  { from: 'frances', tail: true,  text: 'the winning deck had a slide that just said SYNERGY in 200pt helvetica on a teal gradient', time: '9:21 AM' },
+  { from: 'frances', tail: false, text: 'no context. no explanation. just the word synergy, radiating confidence it did not earn', time: '9:21 AM' },
+  { type: 'gap' },
+
+  { from: 'joseph', tail: true,  text: 'honestly respect the audacity', time: '9:22 AM' },
+  { type: 'gap' },
+
+  { from: 'frances', tail: true,  text: 'the whole model is broken. agencies just sell headcount. warm bodies on a call is the entire product', time: '9:23 AM' },
+  { from: 'frances', tail: false, text: 'now they\'re pitching "AI-powered" headcount. so. fake warm bodies', time: '9:23 AM' },
+  { type: 'gap' },
+
+  { from: 'joseph', tail: true,  text: 'meanwhile two exhausted people in a room do the actual work and get thanked with a pizza party', time: '9:23 AM' },
+  { type: 'gap' },
+
+  { from: 'frances', tail: true,  text: 'the pizza is always cold', time: '9:24 AM' },
+  { type: 'gap' },
+
+  { from: 'joseph', tail: true,  text: 'always', time: '9:24 AM' },
+  { type: 'gap' },
+
+  { from: 'joseph', tail: true,  text: 'ok i need to say something and i need you to not be responsible about it for at least 30 seconds', time: '9:25 AM' },
+  { type: 'gap' },
+
+  { from: 'frances', tail: true,  text: 'that is a terrifying way to start a sentence', time: '9:25 AM' },
+  { type: 'gap' },
+
+  { from: 'joseph', tail: true,  text: 'think it\'s time to launch our own shop.', time: '9:26 AM' },
+  { type: 'gap' },
+
+  { from: 'frances', tail: true,  text: 'oh thank god', time: '9:26 AM' },
+  { type: 'gap' },
+
+  { from: 'joseph', tail: true,  text: 'that is not the response i was bracing for', time: '9:26 AM' },
+  { type: 'gap' },
+
+  { from: 'frances', tail: true,  text: 'i thought you were about to tell me you were moving to berlin', time: '9:26 AM' },
+  { type: 'gap' },
+
+  { from: 'joseph', tail: true,  text: 'why would i move to berlin', time: '9:27 AM' },
+  { type: 'gap' },
+
+  { from: 'frances', tail: true,  text: 'you\'ve been weird all month', time: '9:27 AM' },
+  { from: 'frances', tail: false, text: 'anyway. yes. obviously. i\'ve already started', time: '9:27 AM' },
+  { type: 'gap' },
+
+  { from: 'joseph', tail: true,  text: 'you\'ve already STARTED', time: '9:27 AM' },
+  { type: 'gap' },
+
+  { from: 'frances', tail: true,  text: 'i have a P&L in a spreadsheet with conditional formatting that turns red when we\'re broke', time: '9:27 AM' },
+  { type: 'gap' },
+
+  { from: 'joseph', tail: true,  text: 'i\'m sorry', time: '9:28 AM' },
+  { from: 'joseph', tail: false, text: 'conditional formatting??', time: '9:28 AM' },
+  { type: 'gap' },
+
+  { from: 'frances', tail: true,  text: 'it turns red at zero. which is also our current projected revenue so the whole sheet is red', time: '9:27 AM' },
+  { type: 'gap' },
+
+  { from: 'joseph', tail: true,  text: 'how long have you been sitting on this', time: '9:28 AM' },
+  { type: 'gap' },
+
+  { from: 'frances', tail: true,  text: 'five months. it\'s in my notes app between the grocery list and a recording of myself sighing for 11 minutes', time: '9:28 AM' },
+  { type: 'gap' },
+
+  { from: 'joseph', tail: true,  text: 'eleven minutes of sighing is genuinely impressive cardio', time: '9:29 AM' },
+  { type: 'gap' },
+
+  { from: 'frances', tail: true,  text: 'here\'s the pitch:', time: '9:30 AM' },
+  { from: 'frances', tail: false, text: '30 years of experience between us is a strong sell.', time: '9:30 AM' },
+  { type: 'gap' },
+
+  { from: 'joseph', tail: true,  text: 'We bring on folks we trust.', time: '9:30 AM' },
+  { type: 'gap' },
+
+  { from: 'frances', tail: true,  text: 'No strategy layers just rewording the brief.', time: '9:30 AM' },
+  { type: 'gap' },
+
+  { from: 'joseph', tail: true,  text: '...just great ideas that smell good. Remember those?', time: '9:30 AM' },
+  { type: 'gap' },
+
+  { from: 'joseph', tail: true,  text: 'what about clients who describe their brand as "elevated but accessible"', time: '9:31 AM' },
+  { type: 'gap' },
+
+  { from: 'frances', tail: true,  text: 'we charge them double for the therapy. triple if they ask us to "integrate AI"', time: '9:31 AM' },
+  { type: 'gap' },
+
+  { from: 'joseph', tail: true,  text: 'ok money though. i have none of that', time: '9:32 AM' },
+  { type: 'gap' },
+
+  { from: 'frances', tail: true,  text: 'two clients said they\'d come with me.', time: '9:33 AM' },
+  { type: 'gap' },
+
+  { from: 'joseph', tail: true,  text: 'so you have clients, capital, an LLC, and a fully conditional-formatted spreadsheet', time: '9:34 AM' },
+  { from: 'joseph', tail: false, text: 'and the missing piece was a creative willing to jump', time: '9:34 AM' },
+  { type: 'gap' },
+
+  { from: 'frances', tail: true,  text: 'willing. available. and ideally someone who won\'t try to set the brand guidelines on fire within the first week', time: '9:35 AM' },
+  { type: 'gap' },
+
+  { from: 'joseph', tail: true,  text: 'i can promise two of those three', time: '9:35 AM' },
+  { type: 'gap' },
+
+  { from: 'frances', tail: true,  text: 'good enough. are you in or not', time: '9:36 AM' },
+  { type: 'gap' },
+
+  { from: 'joseph', tail: true,  text: 'i\'m in. now we need a name', time: '9:37 AM' },
+  { type: 'gap' },
+
+  { from: 'frances', tail: true,  text: 'please tell me you haven\'t been workshopping names in the shower', time: '9:37 AM' },
+  { type: 'gap' },
+
+  { from: 'joseph', tail: true,  text: 'i have a list', time: '9:38 AM' },
+  { type: 'gap' },
+
+  { from: 'frances', tail: true,  text: 'of course you do', time: '9:38 AM' },
+  { type: 'gap' },
+
+  { from: 'joseph', tail: true,  text: 'ok first one. BRAISED', time: '9:39 AM' },
+  { type: 'gap' },
+
+  { from: 'frances', tail: true,  text: 'braised', time: '9:39 AM' },
+  { type: 'gap' },
+
+  { from: 'joseph', tail: true,  text: 'it\'s evocative. slow-cooked. refined. layers of flavour. like what we do with brands', time: '9:39 AM' },
+  { type: 'gap' },
+
+  { from: 'frances', tail: true,  text: 'joseph we are not naming a creative studio after a cooking technique', time: '9:40 AM' },
+  { type: 'gap' },
+
+  { from: 'joseph', tail: true,  text: 'it\'s a metaphor', time: '9:40 AM' },
+  { type: 'gap' },
+
+  { from: 'frances', tail: true,  text: '"hi we\'re braised, we\'d love to do your rebrand" and then the client googles us and gets a pot roast recipe', time: '9:41 AM' },
+  { type: 'gap' },
+
+  { from: 'joseph', tail: true,  text: 'fine. RIVAL FOX', time: '9:41 AM' },
+  { type: 'gap' },
+
+  { from: 'frances', tail: true,  text: 'that sounds like an indie band that peaked in 2014 and now plays weddings', time: '9:42 AM' },
+  { type: 'gap' },
+
+  { from: 'joseph', tail: true,  text: 'it\'s supposed to feel cunning and competitive', time: '9:42 AM' },
+  { type: 'gap' },
+
+  { from: 'frances', tail: true,  text: 'it feels like a craft beer you buy at an airport because there\'s nothing else', time: '9:43 AM' },
+  { type: 'gap' },
+
+  { from: 'joseph', tail: true,  text: 'ok final one. chatgpt gave me this: SUPERFRUIT', time: '9:43 AM' },
+  { type: 'gap' },
+
+  { from: 'frances', tail: true,  text: '....superfruit....?', time: '9:44 AM' },
+  { type: 'gap' },
+
+  { from: 'joseph', tail: true,  text: 'bold. energetic. bursting with creative vitamins', time: '9:44 AM' },
+  { type: 'gap' },
+
+  { from: 'frances', tail: true,  text: 'swear I\'ve been to a smoothie bar called superfruit.', time: '9:44 AM' },
+  { type: 'gap' },
+
+  { from: 'joseph', tail: true,  text: 'the domain is probably taken', time: '9:45 AM' },
+  { type: 'gap' },
+
+  { from: 'frances', tail: true,  text: 'just checked. it is. they have a loyalty card program', time: '9:45 AM' },
+  { type: 'gap' },
+
+  { from: 'joseph', tail: true,  text: 'ok wait. stop. we\'re thinking about this wrong', time: '9:46 AM' },
+  { from: 'joseph', tail: false, text: 'the names are all trying to sound like something. what if MEANS something.', time: '9:46 AM' },
+  { type: 'gap' },
+
+  { from: 'frances', tail: true,  text: 'go on', time: '9:47 AM' },
+  { type: 'gap' },
+
+  { from: 'joseph', tail: true,  text: 'like what do we actually do. like at the core of it...we take briefs apart. we look at what\'s really there underneath all the layers of bad strategy and borrowed ideas. then we rebuild it honest', time: '9:48 AM' },
+  { type: 'gap' },
+
+  { from: 'frances', tail: true,  text: 'Uh huh', time: '9:48 AM' },
+  { type: 'gap' },
+
+  { from: 'joseph', tail: true,  text: 'What about: ASUNDER', time: '9:49 AM' },
+  { type: 'gap' },
+
+  { from: 'frances', tail: true,  text: 'asunder', time: '9:49 AM' },
+  { type: 'gap' },
+
+  { from: 'joseph', tail: true,  text: 'to pull apart. not to destroy — to separate. so you can see the pieces clearly for the first time', time: '9:50 AM' },
+  { type: 'gap' },
+
+  { from: 'frances', tail: true,  text: 'i\'m listening', time: '9:50 AM' },
+  { type: 'gap' },
+
+  { from: 'joseph', tail: true,  text: 'every client comes to us with something dense and tangled. a brand that\'s been through four agencies and nine strategy decks and nobody ever stopped to ask what it was actually supposed to mean. it\'s buried. calcified.', time: '9:51 AM' },
+  { from: 'joseph', tail: false, text: 'we take it asunder. we find the real thing. then we build from there', time: '9:51 AM' },
+  { type: 'gap' },
+
+  { from: 'frances', tail: true,  text: 'ASUNDER STUDIO', time: '9:52 AM' },
+  { type: 'gap' },
+
+  { from: 'joseph', tail: true,  text: 'asunder.studio', time: '9:52 AM' },
+  { type: 'gap' },
+
+  { from: 'frances', tail: true,  text: 'checking the domain', time: '9:52 AM' },
+  { type: 'gap' },
+
+  { from: 'joseph', tail: true,  text: 'and?', time: '9:53 AM' },
+  { type: 'gap' },
+
+  { from: 'frances', tail: true,  text: 'available', time: '9:53 AM' },
+  { type: 'gap' },
+
+  { from: 'joseph', tail: true,  text: 'buy it', time: '9:53 AM' },
+  { type: 'gap' },
+
+  { from: 'frances', tail: true,  text: 'bought it nine seconds ago', time: '9:53 AM' },
+  { type: 'gap' },
+
+  { from: 'joseph', tail: true,  text: 'that is violently efficient', time: '9:54 AM' },
+  { type: 'gap' },
+
+  { from: 'frances', tail: true,  text: 'that\'s what i bring to the table', time: '9:54 AM' },
+  { type: 'gap' },
+
+  { from: 'frances', tail: true,  text: 'asunder studio. we take things apart. we put them back right', time: '9:55 AM' },
+  { type: 'gap' },
+
+  { from: 'joseph', tail: true,  text: 'no pot roasts. no smoothie loyalty cards. no airport IPAs', time: '9:56 AM' },
+  { type: 'gap' },
+
+  { from: 'frances', tail: true,  text: 'just the work, that works.', time: '9:56 AM' },
+  { type: 'gap' },
+
+  { from: 'joseph', tail: true,  text: 'just the work', time: '9:56 AM' },
+];
+
+// Replies when user interacts — context-agnostic so they work whenever the user jumps in.
+// Every set ends on a CTA so the email prompt is never missed.
+const interactionReplies = [
+  // First message — startled, defensive, funny
+  [
+    { from: 'joseph', text: 'uh', delay: 800 },
+    { from: 'joseph', text: 'frances there\'s someone in here', delay: 1400 },
+    { from: 'frances', text: 'what do you mean "in here." this is a private chat', delay: 1800 },
+    { from: 'joseph', text: 'apparently not', delay: 1000 },
+    { from: 'frances', text: 'ok hi. hello. you caught us mid-sentence. that\'s a level of intimacy i wasn\'t prepared for today', delay: 2800 },
+    { from: 'joseph', text: 'how much of that did you actually see. i need to know for legal reasons', delay: 2400 },
+    { from: 'frances', text: 'anyway. if you\'re here on purpose — email us? Might be less awkward than this.', delay: 2000, cta: true },
+  ],
+  // Second message — warming up, still guarded
+  [
+    { from: 'frances', text: 'they\'re still here joseph', delay: 1600 },
+    { from: 'joseph', text: 'i can see that. should we be concerned or flattered', delay: 1800 },
+    { from: 'frances', text: 'depends. are you a client, a spy from a big agency, or just someone who wandered in', delay: 2600 },
+    { from: 'joseph', text: 'if you say the word synergy we\'re shutting this down immediately', delay: 2000 },
+    { from: 'frances', text: 'he means it. i\'ve seen him leave rooms', delay: 1600 },
+    { from: 'joseph', text: 'safer medium: email. tell us what\'s broken, we\'ll tell you if we can help', delay: 2000, cta: true },
+  ],
+  // Third message — warmer, committed CTA
+  [
+    { from: 'joseph', text: 'ok fine. this person is clearly persistent. i respect that in a non-stalker context', delay: 2200 },
+    { from: 'frances', text: 'agreed. anyone who sits through this and doesn\'t leave has something going on', delay: 2800 },
+    { from: 'joseph', text: 'either they need a studio or they\'re writing a screenplay about two people losing their minds', delay: 2200 },
+    { from: 'frances', text: 'either way we should probably talk properly. here — email us', delay: 2000, cta: true },
+    { from: 'joseph', text: 'zero slides. just tell us what\'s broken and we\'ll tell you if we can take it apart', delay: 2400 },
+    { from: 'frances', text: 'was that poetry?', delay: 1200 },
+  ],
+  // Fourth message — playful, nudge CTA again
+  [
+    { from: 'joseph', text: 'this person is still typing. do we have a fan', delay: 1800 },
+    { from: 'frances', text: 'or a very dedicated bot. hard to say', delay: 1600 },
+    { from: 'joseph', text: 'say something only a human would say', delay: 1400 },
+    { from: 'frances', text: 'joseph stop interrogating potential clients', delay: 1600 },
+    { from: 'frances', text: 'seriously though. email us. we promise we\'re less chaotic in a proper thread', delay: 2200, cta: true },
+    { from: 'joseph', text: 'that is a generous interpretation of our email presence', delay: 1800 },
+  ],
+  // Fifth+ messages — they keep coming back
+  [
+    { from: 'frances', text: 'ok at this point you\'re basically part of the founding team', delay: 2000 },
+    { from: 'joseph', text: 'should we add them to the spreadsheet', delay: 1800 },
+    { from: 'frances', text: 'the spreadsheet is not ready for new eyes joseph', delay: 2200 },
+    { from: 'joseph', text: 'fair', delay: 800 },
+    { from: 'frances', text: 'email us before he offers you equity', delay: 1600, cta: true },
+  ],
+];
+
+// ---- ENGINE ----
+
+const chat = document.getElementById('chat');
+const typingEl = document.getElementById('typingIndicator');
+const statusEl = document.getElementById('contactStatus');
+const userInput = document.getElementById('userInput');
+const sendBtn = document.getElementById('sendBtn');
+
+let autoplayRunning = false;
+let autoplayPaused = false;
+let interactionCount = 0;
+let interactionMode = false;
+let ctaShown = false;
+
+function readTime(text) {
+  const words = text.split(/\s+/).length;
+  return Math.min(Math.max(800, 200 + words * 42), 3200);
+}
+function typeTime(text) {
+  const words = text.split(/\s+/).length;
+  return Math.min(600 + words * 80 + Math.random() * 400, 3000);
+}
+
+// Live status-bar clock
+(function tickClock() {
+  const el = document.getElementById('status-clock');
+  if (el) {
+    const d = new Date();
+    let h = d.getHours(), m = d.getMinutes();
+    el.textContent = `${h}:${m < 10 ? '0' : ''}${m}`;
+  }
+  setTimeout(tickClock, 10000);
+})();
+
+function nowTime() {
+  const d = new Date();
+  let h = d.getHours(), m = d.getMinutes();
+  const ap = h >= 12 ? 'PM' : 'AM';
+  h = h % 12 || 12;
+  return `${h}:${m < 10 ? '0' : ''}${m} ${ap}`;
+}
+
+function createMsgEl(msg) {
+  if (msg.type === 'divider') {
+    const el = document.createElement('div');
+    el.className = 'date-divider';
+    el.textContent = msg.text;
+    return el;
+  }
+  if (msg.type === 'gap') {
+    const el = document.createElement('div');
+    el.className = 'cluster-gap';
+    return el;
+  }
+  // side class: 'frances' (left), 'joseph' (right), 'user' (right purple)
+  const side = msg.from || 'user';
+  const isRight = side === 'joseph' || side === 'user';
+  const el = document.createElement('div');
+  el.className = ['msg', side, msg.tail ? 'tail' : ''].filter(Boolean).join(' ');
+
+  // Show sender name on tail messages (first in a cluster)
+  let nameHtml = '';
+  if (msg.tail && msg.from) {
+    const displayName = msg.from === 'frances' ? 'Frances' : msg.from === 'joseph' ? 'Joseph' : 'You';
+    nameHtml = `<div class="sender-name ${msg.from}">${displayName}</div>`;
+  }
+  // Ticks on right-side messages
+  let ticksHtml = isRight ? `<span class="ticks single">&#10003;</span>` : '';
+  const time = msg.time || nowTime();
+
+  let ctaHtml = '';
+  if (msg.cta) {
+    ctaHtml = `<div class="cta-wrap"><a class="cta-btn" href="mailto:${EMAIL}">Say hello &rarr;</a></div>`;
+  }
+
+  el.innerHTML = `
+    ${nameHtml}
+    <div class="text">${msg.text}</div>
+    ${ctaHtml}
+    <div class="meta"><span class="time">${time}</span>${ticksHtml}</div>
+    ${msg.emoji ? `<span class="emoji-react">${msg.emoji}</span>` : ''}
+  `;
+  return el;
+}
+
+function scrollToBottom(smooth) {
+  chat.scrollTo({ top: chat.scrollHeight, behavior: smooth ? 'smooth' : 'auto' });
+}
+
+function showTyping(who) {
+  chat.appendChild(typingEl);
+  typingEl.classList.toggle('right', who === 'joseph');
+  typingEl.classList.add('visible');
+  const name = who === 'frances' ? 'Frances' : 'Joseph';
+  statusEl.textContent = `${name} is typing...`;
+  statusEl.classList.add('typing');
+  scrollToBottom(true);
+}
+
+function hideTyping() {
+  typingEl.classList.remove('visible', 'right');
+  statusEl.textContent = 'Frances, Joseph';
+  statusEl.classList.remove('typing');
+}
+
+function makeVisible(el) {
+  requestAnimationFrame(() => el.classList.add('visible'));
+}
+
+function readReceipt(el) {
+  const t = el.querySelector('.ticks');
+  if (t) { t.innerHTML = '&#10003;&#10003;'; t.classList.remove('single'); }
+}
+
+function popEmoji(el) {
+  const e = el.querySelector('.emoji-react');
+  if (e) setTimeout(() => e.classList.add('visible'), 600);
+}
+
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+
+// Cancellable sleep that aborts when user interacts
+let sleepAbort = null;
+function cancellableSleep(ms) {
+  return new Promise(resolve => {
+    const timer = setTimeout(() => resolve(false), ms);
+    sleepAbort = () => { clearTimeout(timer); resolve(true); };
+  });
+}
+
+async function clearChat() {
+  const kids = Array.from(chat.children).filter(c => c !== typingEl);
+  kids.forEach(c => c.classList.add('fade-out'));
+  await sleep(500);
+  kids.forEach(c => c.remove());
+  chat.scrollTop = 0;
+}
+
+// Post a single message with animation
+async function postMsg(msg, smooth) {
+  const el = createMsgEl(msg);
+  chat.insertBefore(el, typingEl);
+  scrollToBottom(smooth !== false);
+  await sleep(30);
+  makeVisible(el);
+  scrollToBottom(true);
+  const side = msg.from || 'user';
+  if (side === 'joseph' || side === 'user') {
+    setTimeout(() => readReceipt(el), 700 + Math.random() * 500);
+  }
+  popEmoji(el);
+  return el;
+}
+
+// ---- AUTOPLAY LOOP ----
+async function runLoop() {
+  while (true) {
+    if (interactionMode) { await sleep(500); continue; }
+    autoplayRunning = true;
+    chat.scrollTop = 0;
+
+    for (let i = 0; i < conversation.length; i++) {
+      if (interactionMode) break;
+
+      const msg = conversation[i];
+
+      if (msg.type === 'gap') {
+        const el = createMsgEl(msg);
+        chat.insertBefore(el, typingEl);
+        const aborted = await cancellableSleep(120);
+        if (aborted) break;
+        continue;
+      }
+
+      if (msg.type === 'divider') {
+        const el = createMsgEl(msg);
+        chat.insertBefore(el, typingEl);
+        await sleep(40);
+        makeVisible(el);
+        scrollToBottom(true);
+        const aborted = await cancellableSleep(600);
+        if (aborted) break;
+        continue;
+      }
+
+      // Compute read-delay from previous message
+      let prevMsg = null;
+      for (let j = i - 1; j >= 0; j--) {
+        if (conversation[j].from) { prevMsg = conversation[j]; break; }
+      }
+      const sameSender = prevMsg && prevMsg.from === msg.from;
+      const pauseAfterRead = prevMsg ? readTime(prevMsg.text) : 400;
+      const followUpPause = sameSender ? Math.min(pauseAfterRead * 0.4, 700) : pauseAfterRead;
+
+      // Show typing indicator then message
+      {
+        const aborted = await cancellableSleep(followUpPause);
+        if (aborted || interactionMode) break;
+      }
+      showTyping(msg.from);
+      {
+        const aborted = await cancellableSleep(typeTime(msg.text));
+        if (aborted || interactionMode) { hideTyping(); break; }
+      }
+      hideTyping();
+      await sleep(80);
+
+      if (interactionMode) break;
+      await postMsg(msg);
+    }
+
+    autoplayRunning = false;
+    if (interactionMode) continue;
+
+    // Hold then loop
+    const aborted = await cancellableSleep(4000);
+    if (aborted) continue;
+    await clearChat();
+    const aborted2 = await cancellableSleep(1500);
+    if (aborted2) continue;
+  }
+}
+
+// ---- USER INTERACTION ----
+async function handleUserMessage(text) {
+  if (!text.trim()) return;
+  // Once a CTA has been shown, the experience is frozen. Ignore further messages.
+  if (ctaShown) return;
+
+  // Stop autoplay
+  interactionMode = true;
+  if (sleepAbort) sleepAbort();
+  hideTyping();
+
+  // Post user's message
+  await postMsg({ from: 'user', text: text.trim(), tail: true, time: nowTime() });
+
+  // Pick reply set
+  const replyIndex = Math.min(interactionCount, interactionReplies.length - 1);
+  const replies = interactionReplies[replyIndex];
+  interactionCount++;
+
+  // Play replies — stop the moment a CTA is posted so the email button is the final beat
+  for (const reply of replies) {
+    await sleep(reply.delay || 1500);
+    showTyping(reply.from);
+    await sleep(typeTime(reply.text));
+    hideTyping();
+    await sleep(80);
+    await postMsg({ from: reply.from, tail: true, text: reply.text, emoji: reply.emoji, cta: reply.cta, time: nowTime() });
+    if (reply.cta) {
+      ctaShown = true;
+      userInput.disabled = true;
+      userInput.placeholder = 'Email us →';
+      sendBtn.disabled = true;
+      sendBtn.style.opacity = '0.4';
+      sendBtn.style.cursor = 'default';
+      break;
+    }
+  }
+
+  // Every reply set ends on a CTA — stop here so the user can read/click it.
+  // interactionMode stays true so runLoop never resumes and the chat doesn't refresh.
+}
+
+// Input handlers
+const inputField = userInput.closest('.input-field');
+function syncHasValue() {
+  inputField.classList.toggle('has-value', userInput.value.length > 0);
+}
+userInput.addEventListener('input', syncHasValue);
+
+sendBtn.addEventListener('click', () => {
+  const text = userInput.value;
+  userInput.value = '';
+  syncHasValue();
+  handleUserMessage(text);
+});
+userInput.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') {
+    e.preventDefault();
+    const text = userInput.value;
+    userInput.value = '';
+    syncHasValue();
+    handleUserMessage(text);
+  }
+});
+
+// ---- LANDING OVERLAY ----
+const landing = document.getElementById('landing');
+const landingClose = document.getElementById('landingClose');
+const landingEmail = document.getElementById('landingEmail');
+const landingCall = document.getElementById('landingCall');
+
+// Inject config-driven hrefs
+landingEmail.href = `mailto:${EMAIL}`;
+landingCall.href = CALENDLY_URL;
+
+function showLanding() {
+  landing.classList.add('visible');
+  landing.setAttribute('aria-hidden', 'false');
+}
+function hideLanding() {
+  landing.classList.remove('visible');
+  landing.setAttribute('aria-hidden', 'true');
+}
+landingClose.addEventListener('click', hideLanding);
+
+// Intercept in-chat CTA click — open landing overlay instead of firing mailto directly
+chat.addEventListener('click', (e) => {
+  const a = e.target.closest('.cta-btn');
+  if (!a) return;
+  e.preventDefault();
+  showLanding();
+});
+
+// Start
+runLoop();
+</script>
+</body>
+</html>

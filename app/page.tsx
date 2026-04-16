@@ -26,7 +26,7 @@ export default function Home() {
     const descriptorEl = document.getElementById("studio-descriptor") as HTMLElement;
 
     // Build per-character descriptor
-    const DESCRIPTOR_TEXT = "ASUNDER is a creative studio\nfor the post-agency world";
+    const DESCRIPTOR_TEXT = "ASUNDER IS A CREATIVE STUDIO\nBUILT FOR THE POST AGENCY ERA";
     const EMAIL_TEXT = "hello@asunder.studio";
     const descriptorChars: { el: HTMLSpanElement; brightness: number }[] = [];
 
@@ -63,7 +63,7 @@ export default function Home() {
     const ILLUMINATE_DECAY = 0.025;
     const ILLUMINATE_PEAK = 1.0;
 
-    const WAVE_DURATION = 2800;
+    const WAVE_DURATION = 1400;
     const WAVE_FEATHER = 0.25;
     let mouseX = -9999, mouseY = -9999;
     let prevMouseX = mouseX, prevMouseY = mouseY;
@@ -214,7 +214,7 @@ export default function Home() {
       if (IS_MOBILE) {
         GRID_SPACING = Math.max(10, Math.min(14, Math.round(FONT_SIZE / 4)));
       } else {
-        GRID_SPACING = Math.max(6, Math.min(10, Math.round(FONT_SIZE / 14)));
+        GRID_SPACING = Math.max(8, Math.min(12, Math.round(FONT_SIZE / 14)));
       }
       DOT_MAX_RADIUS = 1.6;
 
@@ -414,10 +414,10 @@ export default function Home() {
       const waveFront = 1.3 - waveEaseOut * 1.6;
 
       // Intro: background parts outward, logo fades in
-      const INTRO_DURATION = 3000;
+      const INTRO_DURATION = 1500;
       const introT = Math.min(1, elapsed / INTRO_DURATION);
       const introEase = 1 - Math.pow(1 - introT, 3);
-      const logoFadeT = Math.max(0, Math.min(1, (elapsed - 600) / 2200));
+      const logoFadeT = Math.max(0, Math.min(1, (elapsed - 200) / 1200));
       const logoFadeEase = 1 - Math.pow(1 - logoFadeT, 2.5);
 
       // Detail reveal: thick A strokes first (-6 = 6px from any edge), then floral detail eases in
@@ -621,13 +621,21 @@ export default function Home() {
           // Skip if warped outside logo
           if (textDistAt(fx, fy) > detailCutoff) continue;
 
-          // Cursor interaction
+          // Cursor interaction — organic amoeba boundary sampled in polar space
           const cdx2 = fx - mouseX, cdy2 = fy - mouseY;
           const cDist2 = Math.sqrt(cdx2 * cdx2 + cdy2 * cdy2);
           let logoCI = 0;
-          if (cDist2 < CURSOR_RADIUS && cDist2 > 0) {
-            const f = 1 - cDist2 / CURSOR_RADIUS;
-            logoCI = f * f;
+          // Map angle to a circle in noise-space so boundary is always seamlessly closed
+          const angle2 = Math.atan2(cdy2, cdx2);
+          const nCircleR = 1.8;
+          const nCx = Math.cos(angle2) * nCircleR, nCy = Math.sin(angle2) * nCircleR;
+          const blob1 = noise2D(nCx + t * 0.28, nCy + t * 0.21);
+          const blob2 = noise2D(nCx * 0.5 + 40 + t * 0.17, nCy * 0.5 + 40 + t * 0.13);
+          const blobNoise = blob1 * 0.65 + blob2 * 0.35;
+          const logoEffectR = CURSOR_RADIUS * (1.45 + blobNoise * 0.55);
+          if (cDist2 < logoEffectR && cDist2 > 0) {
+            const f = Math.max(0, 1 - cDist2 / logoEffectR);
+            logoCI = f * f * f * f;
           }
 
           const logoRadius = 0.8 + logoCI * 0.4;
@@ -685,7 +693,7 @@ export default function Home() {
         }
       }
 
-      if (elapsed > WAVE_DURATION * 0.6 && !isTouchDevice) {
+      if (elapsed > WAVE_DURATION * 0.35 && !isTouchDevice) {
         for (let i = 0; i < descriptorChars.length; i++) {
             const ch = descriptorChars[i];
             const rect = ch.el.getBoundingClientRect();
@@ -767,7 +775,7 @@ export default function Home() {
           <div id="wordmark-wrap" className="wordmark-wrap">
             <div className="studio-descriptor" id="studio-descriptor" />
             <a href="/team" className="meet-team-btn">
-              Meet the team &rarr;
+              Eavesdrop &rarr;
             </a>
           </div>
         </section>

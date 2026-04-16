@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>Chat</title>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=Space+Mono:wght@400;700&display=swap');
@@ -100,12 +100,18 @@
     to   { opacity: 1; transform: translateY(0); }
   }
   @media (max-width: 430px) {
-    body { padding: 0; }
+    body { padding: 0; align-items: stretch; }
     .phone-frame {
       width: 100%;
       height: 100vh;
       height: 100dvh;
       border: none;
+    }
+    .status-bar {
+      padding-top: max(12px, env(safe-area-inset-top));
+    }
+    .input-bar {
+      padding-bottom: max(16px, env(safe-area-inset-bottom));
     }
   }
 
@@ -569,7 +575,7 @@
 
 <div class="phone-frame">
   <div class="status-bar">
-    <span>9:41</span>
+    <span id="status-clock"></span>
     <div class="right">
       <svg viewBox="0 0 24 24"><path d="M1 9l2 2c4.97-4.97 13.03-4.97 18 0l2-2C16.93 2.93 7.08 2.93 1 9zm8 8l3 3 3-3c-1.65-1.66-4.34-1.66-6 0zm-4-4l2 2c2.76-2.76 7.24-2.76 10 0l2-2C15.14 9.14 8.87 9.14 5 13z"/></svg>
       <svg viewBox="0 0 24 24"><path d="M15.67 4H14V2h-4v2H8.33C7.6 4 7 4.6 7 5.33v15.34C7 21.4 7.6 22 8.33 22h7.34c.73 0 1.33-.6 1.33-1.33V5.33C17 4.6 16.4 4 15.67 4z"/></svg>
@@ -629,296 +635,144 @@ const CALENDLY_URL = '#'; // TODO: replace with real booking link
 
 // F = Frances (business lead), J = Joseph (creative director)
 const conversation = [
-  { type: 'divider', text: 'THURSDAY' },
+  { type: 'divider', text: (() => { const d = new Date(); return d.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' }).toUpperCase(); })() },
 
-  { from: 'frances', tail: true,  text: 'ok i had an idea in the ikea carpark', time: '2:41 PM' },
+  { from: 'joseph', tail: true,  text: 'you know what could be cool', time: '9:07 AM' },
   { type: 'gap' },
 
-  { from: 'joseph', tail: true,  text: 'oh no', time: '2:41 PM' },
+  { from: 'frances', tail: true,  text: 'here we go', time: '9:08 AM' },
   { type: 'gap' },
 
-  { from: 'frances', tail: true,  text: 'what if we didn\'t do decks', time: '2:42 PM' },
-  { from: 'frances', tail: false, text: 'like at all. ever. not one.', time: '2:42 PM' },
+  { from: 'joseph', tail: true,  text: 'what if we just never had a meeting. like. not once.', time: '9:08 AM' },
   { type: 'gap' },
 
-  { from: 'joseph', tail: true,  text: 'you mean what if we starved to death within a month', time: '2:42 PM' },
+  { from: 'frances', tail: true,  text: 'we literally have a call on thursday', time: '9:09 AM' },
   { type: 'gap' },
 
-  { from: 'frances', tail: true,  text: 'no listen. we replace the deck with a package. a literal box. ships to the client. brand book. a film. a candle that smells like the brand.', time: '2:43 PM' },
+  { from: 'joseph', tail: true,  text: 'i\'m saying philosophically', time: '9:09 AM' },
   { type: 'gap' },
 
-  { from: 'joseph', tail: true,  text: 'a candle that smells like the brand', time: '2:43 PM' },
+  { from: 'frances', tail: true,  text: 'you\'re saying it the thursday before the call', time: '9:09 AM' },
   { type: 'gap' },
 
-  { from: 'frances', tail: true,  text: 'a BRAND candle joseph', time: '2:44 PM' },
+  { from: 'joseph', tail: true,  text: 'the brief arrives. then a call to discuss the brief. then a deck to respond to the brief. then a call to walk through the deck. then amends. then another call.', time: '9:10 AM' },
   { type: 'gap' },
 
-  { from: 'joseph', tail: true,  text: 'ok. what does a fintech smell like', time: '2:44 PM' },
-  { from: 'joseph', tail: false, text: 'serious question', time: '2:44 PM' },
+  { from: 'frances', tail: true,  text: 'then an email thread cc\'d into oblivion', time: '9:10 AM' },
   { type: 'gap' },
 
-  { from: 'frances', tail: true,  text: 'fresh linen and mild regret', time: '2:45 PM', emoji: '💀' },
+  { from: 'joseph', tail: true,  text: '"just looping in sarah"', time: '9:11 AM' },
   { type: 'gap' },
 
-  { from: 'joseph', tail: true,  text: 'ok the package idea is actually good. the deck is the most hated document in our industry and we keep making them', time: '2:46 PM' },
+  { from: 'frances', tail: true,  text: 'sarah has been on every email for four months and has never once replied', time: '9:11 AM' },
   { type: 'gap' },
 
-  { from: 'frances', tail: true,  text: '92 slides to explain a logo that took four minutes to draw', time: '2:46 PM' },
+  { from: 'joseph', tail: true,  text: 'sarah is a concept at this point', time: '9:12 AM' },
   { type: 'gap' },
 
-  { from: 'joseph', tail: true,  text: 'what if every rebrand ships with a film. 60 seconds. no voiceover. just: this is who you are now', time: '2:47 PM' },
+  { from: 'frances', tail: true,  text: 'sarah is the agency\'s way of saying "we\'re too scared to just send you a decision"', time: '9:12 AM' },
   { type: 'gap' },
 
-  { from: 'frances', tail: true,  text: 'yes. what else. keep going', time: '2:47 PM' },
+  { from: 'joseph', tail: true,  text: 'what if we operated like sarah didn\'t exist. no sarah layer. ever.', time: '9:13 AM' },
   { type: 'gap' },
 
-  { from: 'joseph', tail: true,  text: 'what if we charge by the idea', time: '2:48 PM' },
+  { from: 'frances', tail: true,  text: 'us, the client, the work. nothing else on the chain.', time: '9:13 AM' },
   { type: 'gap' },
 
-  { from: 'frances', tail: true,  text: 'explain', time: '2:48 PM' },
+  { from: 'joseph', tail: true,  text: 'and we use AI the way a racing driver uses the car. not scared of it. not worshipping it. just driving.', time: '9:14 AM' },
   { type: 'gap' },
 
-  { from: 'joseph', tail: true,  text: 'no hours. no retainers. one idea = one invoice. if the idea is big, the invoice is big. if the idea is small we don\'t send one', time: '2:49 PM' },
+  { from: 'frances', tail: true,  text: 'you\'ve been sitting on that metaphor', time: '9:14 AM' },
   { type: 'gap' },
 
-  { from: 'frances', tail: true,  text: 'so we\'re either rich or homeless', time: '2:49 PM' },
+  { from: 'joseph', tail: true,  text: 'three weeks', time: '9:15 AM' },
   { type: 'gap' },
 
-  { from: 'joseph', tail: true,  text: 'correct', time: '2:49 PM' },
+  { from: 'frances', tail: true,  text: 'it shows', time: '9:15 AM' },
   { type: 'gap' },
 
-  { from: 'frances', tail: true,  text: 'this might actually be the whole thing', time: '2:50 PM' },
+  { from: 'joseph', tail: true,  text: 'ok weirder. what if the studio had a smell', time: '9:16 AM' },
   { type: 'gap' },
 
-  { from: 'joseph', tail: true,  text: 'what if we only had one client at a time', time: '2:51 PM' },
+  { from: 'frances', tail: true,  text: 'joseph', time: '9:16 AM' },
   { type: 'gap' },
 
-  { from: 'frances', tail: true,  text: 'one at a time?? we\'d sink inside a quarter', time: '2:51 PM' },
+  { from: 'joseph', tail: true,  text: 'hear me out. great brands have a smell. apple stores smell like ambition and recycled air. ikea smells like swedish meatballs and mild regret.', time: '9:16 AM' },
   { type: 'gap' },
 
-  { from: 'joseph', tail: true,  text: 'or we\'d be the most focused studio on earth and they pay us accordingly. every engagement is a mission. we go in, do the work, leave', time: '2:52 PM' },
+  { from: 'frances', tail: true,  text: 'i have been to an ikea recently and that is accurate', time: '9:17 AM' },
   { type: 'gap' },
 
-  { from: 'frances', tail: true,  text: 'the mission framing is already doing something for me', time: '2:52 PM' },
+  { from: 'joseph', tail: true,  text: 'what does asunder smell like', time: '9:17 AM' },
   { type: 'gap' },
 
-  { from: 'joseph', tail: true,  text: 'asunder: special forces for brands', time: '2:53 PM' },
+  { from: 'frances', tail: true,  text: 'probably coffee and the specific anxiety of two people starting a business with no clients', time: '9:18 AM', emoji: '💀' },
   { type: 'gap' },
 
-  { from: 'frances', tail: true,  text: 'please never say that in public', time: '2:53 PM' },
+  { from: 'joseph', tail: true,  text: 'so. a candle.', time: '9:18 AM' },
   { type: 'gap' },
 
-  { from: 'joseph', tail: true,  text: 'ok next. what if the website was just a chat window', time: '2:54 PM' },
-  { from: 'joseph', tail: false, text: 'no about page. no grid of logos. no case studies. just us. talking.', time: '2:54 PM' },
+  { from: 'frances', tail: true,  text: 'we are not making a candle', time: '9:19 AM' },
   { type: 'gap' },
 
-  { from: 'frances', tail: true,  text: 'meta. dangerous. i love it', time: '2:54 PM' },
+  { from: 'joseph', tail: true,  text: 'BRANDED candle', time: '9:19 AM' },
   { type: 'gap' },
 
-  { from: 'joseph', tail: true,  text: 'people scroll agency sites and remember nothing. nobody forgets a conversation they accidentally walked in on', time: '2:55 PM' },
+  { from: 'frances', tail: true,  text: 'absolutely not', time: '9:19 AM' },
   { type: 'gap' },
 
-  { from: 'frances', tail: true,  text: 'especially if one of the people is me', time: '2:55 PM' },
+  { from: 'joseph', tail: true,  text: 'fine. not the candle. but the principle. brand as something you feel in a room, not a pdf', time: '9:20 AM' },
   { type: 'gap' },
 
-  { from: 'joseph', tail: true,  text: 'another one. emergency rebrand line. 24-hour turnaround. clients call us at 3am when a competitor drops something cursed', time: '2:56 PM' },
+  { from: 'frances', tail: true,  text: 'i\'ll give you the principle. not the candle.', time: '9:20 AM' },
   { type: 'gap' },
 
-  { from: 'frances', tail: true,  text: 'the brand ER', time: '2:56 PM', emoji: '🚨' },
+  { from: 'joseph', tail: true,  text: 'noted', time: '9:21 AM' },
   { type: 'gap' },
 
-  { from: 'joseph', tail: true,  text: 'we show up with the AI pipeline, three coffees, and a plan by sunrise', time: '2:57 PM' },
+  { from: 'frances', tail: true,  text: 'what\'s the actual thing. the thing we keep coming back to.', time: '9:22 AM' },
   { type: 'gap' },
 
-  { from: 'frances', tail: true,  text: 'you. not we. i don\'t do 3am', time: '2:57 PM' },
+  { from: 'joseph', tail: true,  text: 'the best work we\'ve ever done came from small rooms with almost no process and people who actually gave a damn', time: '9:22 AM' },
   { type: 'gap' },
 
-  { from: 'joseph', tail: true,  text: 'you do the invoice part in the morning', time: '2:58 PM' },
+  { from: 'frances', tail: true,  text: 'and the worst came from the rooms with the most layers', time: '9:23 AM' },
   { type: 'gap' },
 
-  { from: 'frances', tail: true,  text: 'beautiful. division of labour. founding document of our company', time: '2:58 PM' },
+  { from: 'joseph', tail: true,  text: 'every layer is another place for the idea to die a polite death', time: '9:23 AM' },
   { type: 'gap' },
 
-  { from: 'frances', tail: true,  text: 'what about a residency', time: '2:59 PM' },
-  { from: 'frances', tail: false, text: 'we embed with a founder for a week. couch. whiteboard. the real stuff. then we build', time: '3:00 PM' },
+  { from: 'frances', tail: true,  text: '"we just think it could be a touch more accessible"', time: '9:24 AM' },
   { type: 'gap' },
 
-  { from: 'joseph', tail: true,  text: 'a documentary crew but for strategy', time: '3:00 PM' },
+  { from: 'joseph', tail: true,  text: '"accessible" has destroyed more interesting things than any client note in history', time: '9:24 AM' },
   { type: 'gap' },
 
-  { from: 'frances', tail: true,  text: 'every other agency interviews the CEO for 40 minutes on zoom and calls it "discovery"', time: '3:01 PM' },
+  { from: 'frances', tail: true,  text: 'put it on the wall', time: '9:25 AM' },
   { type: 'gap' },
 
-  { from: 'joseph', tail: true,  text: 'discovery is a word that\'s been beaten to death behind a shed', time: '3:01 PM' },
+  { from: 'joseph', tail: true,  text: 'we have a google doc that is metaphorically a wall', time: '9:25 AM' },
   { type: 'gap' },
 
-  { from: 'frances', tail: true,  text: 'ok ok try this', time: '3:02 PM' },
-  { from: 'frances', tail: false, text: 'anti-deliverables. we send clients a zine. a mixtape. a letter. one really good photo. the actual brand assets arrive later.', time: '3:02 PM' },
+  { from: 'frances', tail: true,  text: 'no layers. actual people. tools that make us faster, not replaceable.', time: '9:26 AM' },
   { type: 'gap' },
 
-  { from: 'joseph', tail: true,  text: 'the zine is the hook. the logo is the receipt.', time: '3:03 PM' },
+  { from: 'joseph', tail: true,  text: 'and we\'re honest when the problem they\'ve brought us isn\'t the actual problem', time: '9:26 AM' },
   { type: 'gap' },
 
-  { from: 'frances', tail: true,  text: 'write that down', time: '3:03 PM' },
+  { from: 'frances', tail: true,  text: 'that one costs us jobs', time: '9:27 AM' },
   { type: 'gap' },
 
-  { from: 'joseph', tail: true,  text: 'i am writing everything down. this chat IS the notebook', time: '3:03 PM' },
+  { from: 'joseph', tail: true,  text: 'it also earns us better ones', time: '9:27 AM' },
   { type: 'gap' },
 
-  { from: 'frances', tail: true,  text: 'one more. a secret client list. we never publicly say who we work with. the only way to find us is through another client', time: '3:04 PM' },
+  { from: 'frances', tail: true,  text: 'annoyed into excellence', time: '9:28 AM' },
   { type: 'gap' },
 
-  { from: 'joseph', tail: true,  text: 'omertà for branding', time: '3:05 PM' },
+  { from: 'joseph', tail: true,  text: 'that\'s the whole pitch isn\'t it', time: '9:28 AM' },
   { type: 'gap' },
 
-  { from: 'frances', tail: true,  text: 'makes us feel impossible to get to. which is its own marketing.', time: '3:05 PM' },
-  { type: 'gap' },
-
-  { from: 'joseph', tail: true,  text: 'the mystery is the media buy', time: '3:06 PM' },
-  { type: 'gap' },
-
-  { from: 'frances', tail: true,  text: 'wait. hold on. new idea.', time: '3:07 PM' },
-  { type: 'gap' },
-
-  { from: 'joseph', tail: true,  text: 'you have the look', time: '3:07 PM' },
-  { type: 'gap' },
-
-  { from: 'frances', tail: true,  text: 'we only take briefs that scare us. if the idea doesn\'t make one of us a little nauseous, we pass.', time: '3:08 PM' },
-  { type: 'gap' },
-
-  { from: 'joseph', tail: true,  text: 'the fear tax', time: '3:08 PM' },
-  { type: 'gap' },
-
-  { from: 'frances', tail: true,  text: 'if we\'re not nervous the work won\'t be good. so nerves become the filter.', time: '3:09 PM' },
-  { type: 'gap' },
-
-  { from: 'joseph', tail: true,  text: 'put that on the wall. when we have a wall.', time: '3:09 PM' },
-  { type: 'gap' },
-
-  { from: 'frances', tail: true,  text: 'we have a google doc that is metaphorically a wall', time: '3:10 PM' },
-  { type: 'gap' },
-
-  { from: 'joseph', tail: true,  text: 'ok i\'m getting somewhere. what if the tagline isn\'t a line. it\'s a smell.', time: '3:11 PM' },
-  { type: 'gap' },
-
-  { from: 'frances', tail: true,  text: 'a smell', time: '3:11 PM' },
-  { type: 'gap' },
-
-  { from: 'joseph', tail: true,  text: 'you walk into the flagship and you know. you can\'t say why. you just do.', time: '3:12 PM' },
-  { type: 'gap' },
-
-  { from: 'frances', tail: true,  text: 'so we\'re perfumers now', time: '3:12 PM' },
-  { type: 'gap' },
-
-  { from: 'joseph', tail: true,  text: 'part time', time: '3:12 PM' },
-  { type: 'gap' },
-
-  { from: 'frances', tail: true,  text: 'fine. adding it. what else.', time: '3:13 PM' },
-  { type: 'gap' },
-
-  { from: 'joseph', tail: true,  text: 'every brand gets a sworn enemy. written into the positioning. a company we will not name but will quietly take apart over five years.', time: '3:14 PM' },
-  { type: 'gap' },
-
-  { from: 'frances', tail: true,  text: 'that\'s a lot of legal risk', time: '3:14 PM' },
-  { type: 'gap' },
-
-  { from: 'joseph', tail: true,  text: 'that\'s the fun part', time: '3:14 PM' },
-  { type: 'gap' },
-
-  { from: 'frances', tail: true,  text: 'ok mine. annual reports written as short stories. no charts. no bullet points. one unnamed narrator.', time: '3:15 PM' },
-  { type: 'gap' },
-
-  { from: 'joseph', tail: true,  text: 'the CFO would quit', time: '3:15 PM' },
-  { type: 'gap' },
-
-  { from: 'frances', tail: true,  text: 'the CFO would frame it', time: '3:16 PM' },
-  { type: 'gap' },
-
-  { from: 'joseph', tail: true,  text: 'a font that only exists on one typewriter. the client keeps the typewriter. every wordmark in the identity gets typed by hand on that machine.', time: '3:17 PM' },
-  { type: 'gap' },
-
-  { from: 'frances', tail: true,  text: 'scarcity as a type foundry', time: '3:17 PM' },
-  { type: 'gap' },
-
-  { from: 'joseph', tail: true,  text: 'and it means the brand has a real physical object at its centre. a thing. not a file.', time: '3:17 PM' },
-  { type: 'gap' },
-
-  { from: 'frances', tail: true,  text: 'next. we bury a time capsule under the client\'s HQ on launch day. opened in 40 years. contents undisclosed, including to the client.', time: '3:18 PM' },
-  { type: 'gap' },
-
-  { from: 'joseph', tail: true,  text: 'a brand with a secret even from itself', time: '3:18 PM' },
-  { type: 'gap' },
-
-  { from: 'frances', tail: true,  text: 'the more i say it out loud the more i mean it', time: '3:19 PM' },
-  { type: 'gap' },
-
-  { from: 'joseph', tail: true,  text: 'campaign with no launch. no press release. no paid media. we just start doing the thing and wait for someone to notice.', time: '3:20 PM' },
-  { type: 'gap' },
-
-  { from: 'frances', tail: true,  text: 'and if nobody notices', time: '3:20 PM' },
-  { type: 'gap' },
-
-  { from: 'joseph', tail: true,  text: 'then we were right about them not being ready', time: '3:20 PM' },
-  { type: 'gap' },
-
-  { from: 'frances', tail: true,  text: 'that is the most expensive shrug i\'ve ever heard', time: '3:21 PM' },
-  { type: 'gap' },
-
-  { from: 'joseph', tail: true,  text: 'put it on the invoice', time: '3:21 PM' },
-  { type: 'gap' },
-
-  { from: 'frances', tail: true,  text: 'ok here\'s one. we never show old work. no case studies, ever. the only proof we exist is the next thing we make.', time: '3:22 PM' },
-  { type: 'gap' },
-
-  { from: 'joseph', tail: true,  text: 'a portfolio of one', time: '3:22 PM' },
-  { type: 'gap' },
-
-  { from: 'frances', tail: true,  text: 'always the current piece. everything before it is gone.', time: '3:23 PM' },
-  { type: 'gap' },
-
-  { from: 'joseph', tail: true,  text: 'ok one more. 40-year campaign plan. first beat runs next quarter. last beat runs in 2066. the client signs their great-granddaughter to the deliverables.', time: '3:24 PM' },
-  { type: 'gap' },
-
-  { from: 'frances', tail: true,  text: 'billable till the heat death of the universe', time: '3:24 PM' },
-  { type: 'gap' },
-
-  { from: 'joseph', tail: true,  text: 'we either become a dynasty or a cautionary tale', time: '3:25 PM' },
-  { type: 'gap' },
-
-  { from: 'frances', tail: true,  text: 'those are the only two outcomes worth aiming at', time: '3:25 PM' },
-  { type: 'gap' },
-
-  { from: 'joseph', tail: true,  text: 'let\'s do all of it', time: '3:26 PM' },
-  { type: 'gap' },
-
-  { from: 'frances', tail: true,  text: 'all of what', time: '3:26 PM' },
-  { type: 'gap' },
-
-  { from: 'joseph', tail: true,  text: 'the chat website. the package. one idea one invoice. the residency. the fear tax. the 3am line you\'re not doing. the smell. the enemy. the typewriter. the capsule. the 40-year plan.', time: '3:27 PM' },
-  { type: 'gap' },
-
-  { from: 'frances', tail: true,  text: 'that\'s every idea we had in one afternoon', time: '3:28 PM' },
-  { type: 'gap' },
-
-  { from: 'joseph', tail: true,  text: 'yes', time: '3:28 PM' },
-  { type: 'gap' },
-
-  { from: 'frances', tail: true,  text: 'we should probably sleep on some of them', time: '3:29 PM' },
-  { type: 'gap' },
-
-  { from: 'joseph', tail: true,  text: 'we won\'t', time: '3:29 PM' },
-  { type: 'gap' },
-
-  { from: 'frances', tail: true,  text: 'no we won\'t', time: '3:30 PM' },
-  { type: 'gap' },
-
-  { from: 'frances', tail: true,  text: 'this is the part where we usually lose momentum and go back to safer work', time: '3:31 PM' },
-  { type: 'gap' },
-
-  { from: 'joseph', tail: true,  text: 'not this time', time: '3:31 PM' },
-  { type: 'gap' },
-
-  { from: 'frances', tail: true,  text: 'not this time', time: '3:32 PM' },
+  { from: 'frances', tail: true,  text: 'always was', time: '9:29 AM' },
 ];
 
 // Replies when user interacts — context-agnostic so they work whenever the user jumps in.
@@ -927,47 +781,46 @@ const interactionReplies = [
   // First message — caught mid-riff
   [
     { from: 'joseph', text: 'wait', delay: 800 },
-    { from: 'joseph', text: 'frances there\'s someone in here', delay: 1400 },
-    { from: 'frances', text: 'in here. in our private ideas chat.', delay: 1800 },
-    { from: 'joseph', text: 'apparently it was never that private', delay: 1000 },
-    { from: 'frances', text: 'ok hi. you\'ve walked in on us workshopping a brand candle. i\'m not sure which of us should apologise', delay: 2800 },
-    { from: 'joseph', text: 'how much did you hear. be honest.', delay: 2400 },
-    { from: 'frances', text: 'if you\'re here on purpose — email us. properly. we can explain the candle.', delay: 2000, cta: true },
+    { from: 'joseph', text: 'frances someone\'s in here', delay: 1400 },
+    { from: 'frances', text: 'in the ideas chat. our private ideas chat.', delay: 1800 },
+    { from: 'joseph', text: 'apparently not that private', delay: 1000 },
+    { from: 'frances', text: 'hi. you\'ve walked in on us mid-thought. that\'s either good timing or a sign you\'re the kind of person we\'d work well with', delay: 3000 },
+    { from: 'joseph', text: 'how much of that did you actually read', delay: 2000 },
+    { from: 'frances', text: 'either way — email us. properly. let\'s have a real conversation.', delay: 2000, cta: true },
   ],
   // Second message — warming up
   [
     { from: 'frances', text: 'still here joseph', delay: 1600 },
-    { from: 'joseph', text: 'persistent. i like that in a stranger', delay: 1800 },
-    { from: 'frances', text: 'are you a client, a spy from a big agency, or a person who wandered in', delay: 2600 },
-    { from: 'joseph', text: 'if you say the word synergy we are shutting this down', delay: 2000 },
-    { from: 'frances', text: 'he means it. i\'ve seen him leave rooms.', delay: 1600 },
-    { from: 'joseph', text: 'safer medium: email. tell us what\'s broken. we\'ll tell you if we can help.', delay: 2000, cta: true },
+    { from: 'joseph', text: 'persistent. i respect that in a stranger.', delay: 1800 },
+    { from: 'frances', text: 'are you here because something\'s broken, because you\'re curious, or because the mycelium thing got you', delay: 2600 },
+    { from: 'joseph', text: 'it gets everyone eventually', delay: 1400 },
+    { from: 'frances', text: 'email us. tell us what\'s actually going on. we\'ll tell you if we can help.', delay: 2000, cta: true },
   ],
   // Third message — warmer, real offer
   [
-    { from: 'joseph', text: 'ok. this one\'s committed. that\'s a creative director\'s trait.', delay: 2200 },
-    { from: 'frances', text: 'or a very lonely tuesday', delay: 2800 },
-    { from: 'joseph', text: 'either way they\'ve sat through enough of our riffing to deserve a real conversation', delay: 2200 },
-    { from: 'frances', text: 'let\'s do it properly — email us. no deck. just tell us what\'s actually going on.', delay: 2000, cta: true },
-    { from: 'joseph', text: 'we\'ll tell you if we can take it apart', delay: 2400 },
-    { from: 'frances', text: 'was that a pun?', delay: 1200 },
+    { from: 'joseph', text: 'ok. three messages in. this one means it.', delay: 2200 },
+    { from: 'frances', text: 'anyone who sits through the fear tax conversation has something going on', delay: 2600 },
+    { from: 'joseph', text: 'bring us something that makes one of us a little nauseous', delay: 2000 },
+    { from: 'frances', text: 'email us. no deck. just tell us what\'s broken and why it matters.', delay: 2000, cta: true },
+    { from: 'joseph', text: 'we\'ll take it apart', delay: 1800 },
+    { from: 'frances', text: 'was that a pun', delay: 1000 },
   ],
   // Fourth message — playful, nudge again
   [
-    { from: 'joseph', text: 'still typing. do we have a fan', delay: 1800 },
-    { from: 'frances', text: 'or a bot with incredible taste', delay: 1600 },
+    { from: 'joseph', text: 'still here. still typing.', delay: 1800 },
+    { from: 'frances', text: 'do we have a fan or a very discerning bot', delay: 1600 },
     { from: 'joseph', text: 'say something only a human would say', delay: 1400 },
-    { from: 'frances', text: 'joseph stop interrogating potential clients', delay: 1600 },
-    { from: 'frances', text: 'seriously though. email. we\'re less chaotic in a proper thread. allegedly.', delay: 2200, cta: true },
-    { from: 'joseph', text: 'that is a generous read of our email presence', delay: 1800 },
+    { from: 'frances', text: 'joseph. stop.', delay: 1000 },
+    { from: 'frances', text: 'email us. we promise we\'re less chaotic in a proper thread. allegedly.', delay: 2200, cta: true },
+    { from: 'joseph', text: 'generous interpretation of our email presence', delay: 1800 },
   ],
   // Fifth+ messages — basically on the team now
   [
     { from: 'frances', text: 'at this point you\'re in the founding meeting', delay: 2000 },
-    { from: 'joseph', text: 'do we add them to the spreadsheet', delay: 1800 },
-    { from: 'frances', text: 'the spreadsheet is not ready for outside eyes joseph', delay: 2200 },
+    { from: 'joseph', text: 'should we add them to the google doc', delay: 1800 },
+    { from: 'frances', text: 'the doc is not ready for outside eyes joseph', delay: 2000 },
     { from: 'joseph', text: 'fair', delay: 800 },
-    { from: 'frances', text: 'email us before he offers you equity', delay: 1600, cta: true },
+    { from: 'frances', text: 'email us before he makes you a co-founder', delay: 1600, cta: true },
   ],
 ];
 
@@ -993,6 +846,16 @@ function typeTime(text) {
   const words = text.split(/\s+/).length;
   return Math.min(600 + words * 80 + Math.random() * 400, 3000);
 }
+
+(function tickClock() {
+  const el = document.getElementById('status-clock');
+  if (el) {
+    const d = new Date();
+    let h = d.getHours(), m = d.getMinutes();
+    el.textContent = `${h}:${m < 10 ? '0' : ''}${m}`;
+  }
+  setTimeout(tickClock, 10000);
+})();
 
 function nowTime() {
   const d = new Date();
