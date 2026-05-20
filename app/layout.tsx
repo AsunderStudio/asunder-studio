@@ -3,10 +3,10 @@ import "./globals.css";
 
 export const metadata: Metadata = {
   title: "Asunder Studio",
-  description: "#@$%&*+=<>/?{}[]~ 2026.",
+  description: "Asunder is a studio for brands navigating the age of average. Experts in campaigns, brand identity, and more.",
   openGraph: {
     title: "Asunder Studio",
-    description: "#@$%&*+=<>/?{}[]~ 2026.",
+    description: "Asunder is a studio for brands navigating the age of average. Experts in campaigns, brand identity, and more.",
     url: "https://asunder.studio",
     siteName: "Asunder Studio",
     locale: "en_US",
@@ -15,7 +15,7 @@ export const metadata: Metadata = {
   twitter: {
     card: "summary_large_image",
     title: "Asunder Studio",
-    description: "#@$%&*+=<>/?{}[]~ 2026.",
+    description: "Asunder is a studio for brands navigating the age of average. Experts in campaigns, brand identity, and more.",
   },
 };
 

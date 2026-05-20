@@ -3,34 +3,14 @@
 import { useEffect } from "react";
 
 export default function Home() {
-  // Scroll-driven parallax + hero fade
-  useEffect(() => {
-    const canvas = document.getElementById("particle-canvas") as HTMLElement;
-    const wordmark = document.getElementById("wordmark-wrap") as HTMLElement;
-    const onScroll = () => {
-      const s = window.scrollY;
-      const vh = window.innerHeight;
-      const wordmarkFade = Math.max(0, 1 - s / (vh * 0.5));
-      const canvasFade = Math.max(0.35, 1 - s / (vh * 0.7));
-      if (canvas) canvas.style.opacity = String(canvasFade);
-      if (wordmark) wordmark.style.opacity = String(wordmarkFade);
-      document.documentElement.style.setProperty("--parallax-offset", `${s * -0.18}px`);
-    };
-    window.addEventListener("scroll", onScroll, { passive: true });
-    return () => window.removeEventListener("scroll", onScroll);
-  }, []);
-
   useEffect(() => {
     const cursorDot = document.getElementById("cursor-dot") as HTMLElement;
     const cursorRing = document.getElementById("cursor-ring") as HTMLElement;
     const descriptorEl = document.getElementById("studio-descriptor") as HTMLElement;
-    const meetBtn = document.getElementById("meet-team-btn") as HTMLElement;
 
     // Build per-character descriptor
-    const DESCRIPTOR_TEXT = "ASUNDER IS A CREATIVE STUDIO\nBUILT FOR THE POST AGENCY ERA";
-    const EMAIL_TEXT = "hello@asunder.studio";
+    const DESCRIPTOR_TEXT = "ASUNDER IS A CREATIVE STUDIO FOR BRANDS\nNAVIGATING THE AGE OF AVERAGE.";
     const descriptorChars: { el: HTMLSpanElement; brightness: number; original: string; glitchUntil: number }[] = [];
-    const btnChars: { el: HTMLSpanElement; original: string; glitchUntil: number }[] = [];
     const GLITCH_POOL = '!@#$%/?|~^<>[]{}░▒▓✦✧⊕⊗';
 
     const appendChars = (text: string, parent: HTMLElement) => {
@@ -54,26 +34,6 @@ export default function Home() {
     };
 
     appendChars(DESCRIPTOR_TEXT, descriptorEl);
-
-    // Email: same reveal treatment, wrapped in a mailto link one line below
-    const emailLink = document.createElement("a");
-    emailLink.href = "mailto:hello@asunder.studio";
-    emailLink.className = "hero-email-inline";
-    appendChars(EMAIL_TEXT, emailLink);
-    descriptorEl.appendChild(emailLink);
-
-    // Button: split into glitch-able spans
-    const btnEl = document.getElementById("meet-team-btn");
-    if (btnEl) {
-      const btnText = "Eavesdrop →";
-      btnEl.textContent = "";
-      for (const ch of btnText) {
-        const span = document.createElement("span");
-        span.textContent = ch;
-        btnEl.appendChild(span);
-        btnChars.push({ el: span, original: ch, glitchUntil: 0 });
-      }
-    }
 
     const ILLUMINATE_RADIUS = 180;
     const ILLUMINATE_DECAY = 0.025;
@@ -261,7 +221,7 @@ export default function Home() {
       off.width = W; off.height = H;
       const octx = off.getContext("2d")!;
 
-      // Scale logo — square dropcap, smaller than old wide wordmark
+      // Scale logo: square dropcap, smaller than old wide wordmark
       const targetW = IS_MOBILE ? Math.min(W * 0.58, 260) : Math.min(W * 0.26, 320);
       const aspect = logoImg.naturalHeight / logoImg.naturalWidth;
       const logoH = targetW * aspect;
@@ -285,7 +245,7 @@ export default function Home() {
       textMask = new Uint8Array(W * H);
 
       if (isOpaqueImage) {
-        // White background image: use inverted luminance directly — skip blob pipeline
+        // White background image: use inverted luminance directly. Skip blob pipeline.
         for (let i = 0; i < W * H; i++) {
           const r = rawData[i * 4], g = rawData[i * 4 + 1], b = rawData[i * 4 + 2];
           const lum = 0.299 * r + 0.587 * g + 0.114 * b;
@@ -425,12 +385,12 @@ export default function Home() {
       const t = time * WARP_SPEED;
       const st = time * SIZE_SPEED;
 
-      // Wordmark wave — starts immediately
+      // Wordmark wave: starts immediately
       const waveT = Math.min(elapsed / WAVE_DURATION, 1);
       const waveEaseOut = 1 - Math.pow(1 - waveT, 2.5);
       const waveFront = 1.3 - waveEaseOut * 1.6;
 
-      // Background wave — delayed until wordmark is established
+      // Background wave: delayed until wordmark is established
       const BG_WAVE_DELAY = 800;
       const bgWaveT = Math.min(Math.max(0, elapsed - BG_WAVE_DELAY) / WAVE_DURATION, 1);
       const bgWaveEaseOut = 1 - Math.pow(1 - bgWaveT, 2.5);
@@ -644,7 +604,7 @@ export default function Home() {
           // Skip if warped outside logo
           if (textDistAt(fx, fy) > detailCutoff) continue;
 
-          // Cursor interaction — organic amoeba boundary sampled in polar space
+          // Cursor interaction: organic amoeba boundary sampled in polar space
           const cdx2 = fx - mouseX, cdy2 = fy - mouseY;
           const cDist2 = Math.sqrt(cdx2 * cdx2 + cdy2 * cdy2);
           let logoCI = 0;
@@ -716,14 +676,6 @@ export default function Home() {
         }
       }
 
-      // Button fades in on the same clock as subcopy
-      if (meetBtn) {
-        const btnT = Math.max(0, Math.min(1, (elapsed - 750) / 600));
-        const btnEase = 1 - Math.pow(1 - btnT, 2);
-        meetBtn.style.opacity = String(btnEase);
-        meetBtn.style.transform = `translateY(${(1 - btnEase) * 6}px)`;
-      }
-
       if (elapsed > 750 && !isTouchDevice) {
         for (let i = 0; i < descriptorChars.length; i++) {
             const ch = descriptorChars[i];
@@ -762,21 +714,6 @@ export default function Home() {
             }
           }
         }
-      // Button glitch — starts after button is visible (~2400ms CSS delay)
-      if (elapsed > 700) {
-        for (let i = 0; i < btnChars.length; i++) {
-          const bc = btnChars[i];
-          if (bc.original === " " || bc.original === "→") continue;
-          if (Math.random() < 0.0010) {
-            bc.glitchUntil = time + 60 + Math.random() * 120;
-            bc.el.textContent = GLITCH_POOL[Math.floor(Math.random() * GLITCH_POOL.length)];
-          } else if (bc.glitchUntil > 0 && time >= bc.glitchUntil) {
-            bc.glitchUntil = 0;
-            bc.el.textContent = bc.original;
-          }
-        }
-      }
-
       mouseVX *= 0.88;
       mouseVY *= 0.88;
 
@@ -827,17 +764,15 @@ export default function Home() {
 
       <canvas id="particle-canvas" />
 
-      <div className="scroll-container">
-        {/* Hero */}
-        <section className="hero-section">
-          <div id="wordmark-wrap" className="wordmark-wrap">
-            <div className="studio-descriptor" id="studio-descriptor" />
-            <a href="/team" className="meet-team-btn" id="meet-team-btn">
-              Eavesdrop →
-            </a>
-          </div>
-        </section>
-      </div>
+      <section className="hero-section">
+        <div id="wordmark-wrap" className="wordmark-wrap">
+          <div className="studio-descriptor" id="studio-descriptor" />
+        </div>
+      </section>
+
+      <footer className="sticky-email">
+        <a href="mailto:hello@asunder.studio">hello@asunder.studio</a>
+      </footer>
 
       <div className="cursor-dot" id="cursor-dot" />
       <div className="cursor-ring" id="cursor-ring" />

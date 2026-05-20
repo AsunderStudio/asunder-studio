@@ -57,8 +57,7 @@ html {
 
 body {
   background: #0a0a0a;
-  overflow-x: hidden;
-  overflow-y: auto;
+  overflow: hidden;
   cursor: none;
   font-family: 'Space Grotesk', sans-serif;
 }
@@ -150,14 +149,6 @@ canvas#particle-canvas {
   .cursor-dot, .cursor-ring { display: none !important; }
 }
 
-/* ── Scroll container ── */
-.scroll-container {
-  position: relative;
-  z-index: 6;
-  height: auto;
-  overflow: visible;
-}
-
 /* ── Hero section ── */
 .hero-section {
   position: relative;
@@ -179,45 +170,34 @@ canvas#particle-canvas {
   align-items: center;
 }
 
-/* ── Inline email below subcopy (reuses .char reveal) ── */
-.hero-email-inline {
-  display: block;
-  margin-top: 14px;
-  text-decoration: none;
-  pointer-events: auto;
-  cursor: pointer;
-}
-
-/* ── Meet the team button ── */
-.meet-team-btn {
-  display: inline-block;
-  margin-top: 28px;
-  font-family: 'Space Mono', monospace;
-  font-size: clamp(0.6rem, 0.85vw, 0.72rem);
-  letter-spacing: 0.22em;
-  text-transform: uppercase;
-  color: rgba(255, 255, 255, 0.85);
-  text-decoration: none;
-  padding: 10px 18px;
-  border: 1px solid rgba(255, 255, 255, 0.28);
-  background: rgba(0, 0, 0, 0.4);
+/* ── Sticky email footer ── */
+.sticky-email {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 50;
+  padding: 18px 28px;
+  display: flex;
+  justify-content: center;
+  pointer-events: none;
+  background: linear-gradient(to top, rgba(10, 10, 10, 0.85), rgba(10, 10, 10, 0));
   backdrop-filter: blur(4px);
   -webkit-backdrop-filter: blur(4px);
-  transition: color 0.25s ease, border-color 0.25s ease, background 0.25s ease;
-  opacity: 0;
+}
+.sticky-email a {
   pointer-events: auto;
+  font-family: 'Space Mono', monospace;
+  font-size: clamp(0.65rem, 0.85vw, 0.78rem);
+  letter-spacing: 0.22em;
+  text-transform: lowercase;
+  color: rgba(255, 255, 255, 0.7);
+  text-decoration: none;
+  transition: color 0.25s ease;
 }
-.meet-team-btn:hover {
+.sticky-email a:hover {
   color: #fff;
-  border-color: rgba(255, 255, 255, 0.7);
-  background: rgba(0, 0, 0, 0.7);
 }
-
-@keyframes heroFadeIn {
-  from { opacity: 0; transform: translateY(6px); }
-  to   { opacity: 1; transform: translateY(0); }
-}
-
 
 /* ── Grain texture ── */
 .grain-overlay {
