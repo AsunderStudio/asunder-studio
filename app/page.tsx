@@ -13,27 +13,43 @@ export default function Home() {
     const descriptorChars: { el: HTMLSpanElement; brightness: number; original: string; glitchUntil: number }[] = [];
     const GLITCH_POOL = '!@#$%/?|~^<>[]{}░▒▓✦✧⊕⊗';
 
-    const appendChars = (text: string, parent: HTMLElement) => {
-      for (let i = 0; i < text.length; i++) {
-        const ch = text[i];
-        if (ch === "\n") {
-          parent.appendChild(document.createElement("br"));
-          continue;
-        }
-        const span = document.createElement("span");
-        span.classList.add("char");
-        if (ch === " ") {
-          span.classList.add("space");
-          span.innerHTML = "&nbsp;";
-        } else {
-          span.textContent = ch;
-        }
-        parent.appendChild(span);
-        descriptorChars.push({ el: span, brightness: 0, original: ch === " " ? " " : ch, glitchUntil: 0 });
-      }
+    const buildChars = (
+      text: string,
+      parent: HTMLElement,
+      store: { el: HTMLSpanElement; brightness: number; original: string; glitchUntil: number }[],
+    ) => {
+      text.split("\n").forEach((line, li) => {
+        if (li > 0) parent.appendChild(document.createElement("br"));
+        line.split(" ").forEach((word, wi) => {
+          if (wi > 0) {
+            const space = document.createElement("span");
+            space.classList.add("char", "space");
+            space.innerHTML = "&nbsp;";
+            parent.appendChild(space);
+          }
+          if (!word) return;
+          const wordEl = document.createElement("span");
+          wordEl.classList.add("word");
+          for (const ch of word) {
+            const span = document.createElement("span");
+            span.classList.add("char");
+            span.textContent = ch;
+            wordEl.appendChild(span);
+            store.push({ el: span, brightness: 0, original: ch, glitchUntil: 0 });
+          }
+          parent.appendChild(wordEl);
+        });
+      });
     };
 
-    appendChars(DESCRIPTOR_TEXT, descriptorEl);
+    buildChars(DESCRIPTOR_TEXT, descriptorEl, descriptorChars);
+
+    // Manifesto: revealed on the black frame once particles disperse
+    const MANIFESTO_TEXT = "For years, algorithms have been finely tuned to reward the familiar.\n\nNow, automation threatens to simply produce the familiar at scale.\n\nTogether, they are creating what we are calling “The Age of Average”: an epoch in the communication arts where brands risk repeating themselves into irrelevance.\n\nWe exist to make sure they don't.";
+    const manifestoChars: { el: HTMLSpanElement; brightness: number; original: string; glitchUntil: number }[] = [];
+    const manifestoWrapEl = document.getElementById("manifesto-wrap") as HTMLElement;
+    const manifestoEl = document.getElementById("manifesto") as HTMLElement;
+    buildChars(MANIFESTO_TEXT, manifestoEl, manifestoChars);
 
     const ILLUMINATE_RADIUS = 180;
     const ILLUMINATE_DECAY = 0.025;
@@ -47,6 +63,9 @@ export default function Home() {
     let ringX = 0, ringY = 0;
     let isMouseDown = false;
     let isTouchDevice = false;
+
+    // Scroll/swipe-up dispersal: 0 = full field, 1 = blank screen
+    let disperse = 0, disperseTarget = 0;
 
     const onMouseMove = (e: MouseEvent) => {
       if (isTouchDevice) return;
@@ -80,12 +99,20 @@ export default function Home() {
       prevMouseX = mouseX; prevMouseY = mouseY;
       mouseX = t.clientX; mouseY = t.clientY;
       mouseVX = mouseX - prevMouseX; mouseVY = mouseY - prevMouseY;
+      // Swipe up disperses, swipe down restores
+      disperseTarget = Math.max(0, Math.min(1, disperseTarget - mouseVY * 0.005));
     };
     const onTouchEnd = () => {
       isMouseDown = false;
       setTimeout(() => { mouseX = -9999; mouseY = -9999; }, 100);
     };
 
+    const onWheel = (e: WheelEvent) => {
+      // Scroll up disperses, scroll down restores
+      disperseTarget = Math.max(0, Math.min(1, disperseTarget - e.deltaY * 0.0014));
+    };
+
+    document.addEventListener("wheel", onWheel, { passive: true });
     document.addEventListener("mousemove", onMouseMove);
     document.addEventListener("mousedown", onMouseDown);
     document.addEventListener("mouseup", onMouseUp);
@@ -385,6 +412,49 @@ export default function Home() {
       const t = time * WARP_SPEED;
       const st = time * SIZE_SPEED;
 
+      disperse += (disperseTarget - disperse) * 0.08;
+      const DISPERSE_DIST = Math.max(W, H) * 1.25;
+      const disperseActive = disperse > 0.001;
+      // Subcopy clears out over the first 40% of the dispersal
+      descriptorEl.style.opacity = String(1 - Math.min(1, disperse / 0.4));
+
+      // Manifesto fades in only after the subcopy is gone
+      const manifestoFade = Math.max(0, Math.min(1, (disperse - 0.5) / 0.4));
+      manifestoWrapEl.style.opacity = String(manifestoFade);
+      if (manifestoFade > 0.01) {
+        for (const ch of manifestoChars) {
+          // Slow glitch swaps
+          if (ch.original !== " " && Math.random() < 0.00032) {
+            ch.glitchUntil = time + 200 + Math.random() * 400;
+            ch.el.textContent = GLITCH_POOL[Math.floor(Math.random() * GLITCH_POOL.length)];
+          } else if (ch.glitchUntil > 0 && time >= ch.glitchUntil) {
+            ch.glitchUntil = 0;
+            ch.el.textContent = ch.original;
+          }
+
+          // Cursor reveal: chars near the cursor go pure white
+          if (!isTouchDevice) {
+            const rect = ch.el.getBoundingClientRect();
+            if (rect.width === 0) continue;
+            const cx = rect.left + rect.width * 0.5;
+            const cy = rect.top + rect.height * 0.5;
+            const ddx = mouseX - cx, ddy = mouseY - cy;
+            const dist = Math.sqrt(ddx * ddx + ddy * ddy);
+            if (dist < ILLUMINATE_RADIUS) {
+              const falloff = 1 - dist / ILLUMINATE_RADIUS;
+              const intensity = falloff * falloff * (3 - 2 * falloff);
+              ch.brightness = Math.max(ch.brightness, ch.brightness + (intensity - ch.brightness) * 0.3);
+            } else {
+              ch.brightness = Math.max(0, ch.brightness - ILLUMINATE_DECAY);
+            }
+            const b = ch.brightness;
+            const channel = Math.round(225 + 30 * b);
+            const alpha = 0.82 + 0.18 * b;
+            ch.el.style.color = `rgba(${channel},${channel},${channel},${alpha})`;
+          }
+        }
+      }
+
       // Wordmark wave: starts immediately
       const waveT = Math.min(elapsed / WAVE_DURATION, 1);
       const waveEaseOut = 1 - Math.pow(1 - waveT, 2.5);
@@ -448,6 +518,15 @@ export default function Home() {
 
             const [sdx, sdy] = getSpringDisp(col + 1, row + 1);
             dx += sdx; dy += sdy;
+
+            if (disperseActive) {
+              const ddx = baseX - W * 0.5, ddy = baseY - H * 0.5;
+              const dd = Math.sqrt(ddx * ddx + ddy * ddy) || 1;
+              const dvar = 0.6 + (noise2D(baseX * 0.01, baseY * 0.01) + 1) * 0.45;
+              const push = disperse * disperse * DISPERSE_DIST * dvar;
+              dx += (ddx / dd) * push;
+              dy += (ddy / dd) * push;
+            }
 
             const cdx = baseX - mouseX, cdy = baseY - mouseY;
             const cDist = Math.sqrt(cdx * cdx + cdy * cdy);
@@ -553,6 +632,11 @@ export default function Home() {
               opacity *= waveAlpha;
               radius *= 0.4 + waveAlpha * 0.6;
               if (waveAlpha < 0.01) continue;
+            }
+
+            if (disperseActive) {
+              opacity *= 1 - disperse;
+              if (opacity < 0.01) continue;
             }
 
             if (radius < 0.15) continue;
@@ -669,9 +753,21 @@ export default function Home() {
             if (flicker < killChance * 2 - 1 + distNorm * 0.8) continue;
           }
 
+          let drawX = fx, drawY = fy;
+          if (disperseActive) {
+            const ddx = bx - W * 0.5, ddy = by - H * 0.5;
+            const dd = Math.sqrt(ddx * ddx + ddy * ddy) || 1;
+            const dvar = 0.6 + (noise2D(bx * 0.01, by * 0.01) + 1) * 0.45;
+            const push = disperse * disperse * DISPERSE_DIST * dvar;
+            drawX += (ddx / dd) * push;
+            drawY += (ddy / dd) * push;
+            logoOpacity *= 1 - disperse;
+            if (logoOpacity < 0.01) continue;
+          }
+
           ctx.fillStyle = `rgba(${lr},${lg},${lb},${logoOpacity})`;
           ctx.beginPath();
-          ctx.arc(fx, fy, logoRadius, 0, Math.PI * 2);
+          ctx.arc(drawX, drawY, logoRadius, 0, Math.PI * 2);
           ctx.fill();
         }
       }
@@ -703,10 +799,11 @@ export default function Home() {
               ch.el.textContent = ch.original;
             }
 
-            const bv = ch.brightness;
+            const dfade = 1 - disperse;
+            const bv = ch.brightness * dfade;
             const isGlitching = ch.glitchUntil > 0 && time < ch.glitchUntil;
             if (isGlitching) {
-              ch.el.style.color = `rgba(255,255,255,${Math.max(bv, 0.35)})`;
+              ch.el.style.color = `rgba(255,255,255,${Math.max(bv, 0.35 * dfade)})`;
             } else if (bv > 0.001) {
               ch.el.style.color = `rgba(255,255,255,${bv})`;
             } else {
@@ -740,6 +837,7 @@ export default function Home() {
     return () => {
       cancelAnimationFrame(rafRing);
       cancelAnimationFrame(rafMain);
+      document.removeEventListener("wheel", onWheel);
       document.removeEventListener("mousemove", onMouseMove);
       document.removeEventListener("mousedown", onMouseDown);
       document.removeEventListener("mouseup", onMouseUp);
@@ -769,6 +867,10 @@ export default function Home() {
           <div className="studio-descriptor" id="studio-descriptor" />
         </div>
       </section>
+
+      <div className="manifesto" id="manifesto-wrap">
+        <p className="manifesto-text" id="manifesto" />
+      </div>
 
       <footer className="sticky-email">
         <a href="mailto:hello@asunder.studio">hello@asunder.studio</a>

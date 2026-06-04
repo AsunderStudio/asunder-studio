@@ -74,13 +74,60 @@ canvas#particle-canvas {
   text-align: center;
   margin-top: calc(var(--logo-half-h, 160px) + 36px);
   pointer-events: none;
-  font-size: clamp(0.58rem, 0.87vw, 0.74rem);
+  font-size: clamp(0.7rem, 1.15vw, 0.9rem);
   font-family: 'Space Mono', monospace;
   font-weight: 400;
   letter-spacing: 0.18em;
   text-transform: uppercase;
   user-select: none;
   line-height: 1.4;
+}
+
+.studio-descriptor .word {
+  display: inline-block;
+  white-space: nowrap;
+}
+
+.manifesto {
+  position: fixed;
+  inset: 0;
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8vw;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.manifesto-text {
+  font-family: 'Space Mono', monospace;
+  font-weight: 400;
+  color: rgba(225, 225, 225, 0.82);
+  font-size: clamp(0.7rem, 1.15vw, 0.9rem);
+  letter-spacing: 0.02em;
+  line-height: 1.85;
+  text-align: center;
+  text-transform: uppercase;
+  max-width: 720px;
+}
+
+.manifesto-text .word {
+  display: inline-block;
+  white-space: nowrap;
+}
+
+.manifesto-text .char {
+  display: inline-block;
+}
+
+.manifesto-text .char.space {
+  width: 0.4em;
+}
+
+@media (max-width: 767px) {
+  .manifesto { padding: 12vw 8vw; }
+  .manifesto-text { font-size: 0.75rem; line-height: 1.8; letter-spacing: 0.01em; }
 }
 
 .studio-descriptor .char {
@@ -141,7 +188,7 @@ canvas#particle-canvas {
 @media (max-width: 768px) {
   body { cursor: auto; }
   .cursor-dot, .cursor-ring { display: none; }
-  .studio-descriptor { font-size: 0.6rem; letter-spacing: 0.14em; }
+  .studio-descriptor { font-size: 0.75rem; letter-spacing: 0.14em; }
 }
 
 @media (hover: none) and (pointer: coarse) {
