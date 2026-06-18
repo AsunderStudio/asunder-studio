@@ -1,21 +1,34 @@
 import type { Metadata } from "next";
 import "./globals.css";
 
+const TITLE = "Asunder Studio";
+const DESCRIPTION = "A creative studio for brands navigating the age of average.";
+
 export const metadata: Metadata = {
-  title: "Asunder Studio",
-  description: "Asunder is a studio for brands navigating the age of average. Experts in campaigns, brand identity, and more.",
+  metadataBase: new URL("https://asunder.studio"),
+  title: TITLE,
+  description: DESCRIPTION,
   openGraph: {
-    title: "Asunder Studio",
-    description: "Asunder is a studio for brands navigating the age of average. Experts in campaigns, brand identity, and more.",
+    title: TITLE,
+    description: DESCRIPTION,
     url: "https://asunder.studio",
     siteName: "Asunder Studio",
     locale: "en_US",
     type: "website",
+    images: [
+      {
+        url: "/og.png",
+        width: 1200,
+        height: 630,
+        alt: "Asunder",
+      },
+    ],
   },
   twitter: {
     card: "summary_large_image",
-    title: "Asunder Studio",
-    description: "Asunder is a studio for brands navigating the age of average. Experts in campaigns, brand identity, and more.",
+    title: TITLE,
+    description: DESCRIPTION,
+    images: ["/og.png"],
   },
 };
 
