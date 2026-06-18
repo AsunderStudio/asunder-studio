@@ -7,16 +7,17 @@ export default function Home() {
     const cursorDot = document.getElementById("cursor-dot") as HTMLElement;
     const cursorRing = document.getElementById("cursor-ring") as HTMLElement;
     const descriptorEl = document.getElementById("studio-descriptor") as HTMLElement;
+    const wordmarkImgEl = document.getElementById("wordmark-img") as HTMLImageElement;
 
     // Build per-character descriptor
-    const DESCRIPTOR_TEXT = "ASUNDER IS A CREATIVE STUDIO FOR BRANDS\nNAVIGATING THE AGE OF AVERAGE.";
-    const descriptorChars: { el: HTMLSpanElement; brightness: number; original: string; glitchUntil: number }[] = [];
+    const DESCRIPTOR_TEXT = "A CREATIVE STUDIO FOR BRANDS\nNAVIGATING THE AGE OF AVERAGE";
+    const descriptorChars: { el: HTMLSpanElement; brightness: number; original: string; glitchUntil: number; baseCX?: number; baseCY?: number }[] = [];
     const GLITCH_POOL = '!@#$%/?|~^<>[]{}░▒▓✦✧⊕⊗';
 
     const buildChars = (
       text: string,
       parent: HTMLElement,
-      store: { el: HTMLSpanElement; brightness: number; original: string; glitchUntil: number }[],
+      store: { el: HTMLSpanElement; brightness: number; original: string; glitchUntil: number; baseCX?: number; baseCY?: number }[],
     ) => {
       text.split("\n").forEach((line, li) => {
         if (li > 0) parent.appendChild(document.createElement("br"));
@@ -46,9 +47,10 @@ export default function Home() {
 
     // Manifesto: revealed on the black frame once particles disperse
     const MANIFESTO_TEXT = "For years, algorithms have been finely tuned to reward the familiar.\n\nNow, automation threatens to simply produce the familiar at scale.\n\nTogether, they are creating what we are calling “The Age of Average”: an epoch in the communication arts where brands risk repeating themselves into irrelevance.\n\nWe exist to make sure they don't.";
-    const manifestoChars: { el: HTMLSpanElement; brightness: number; original: string; glitchUntil: number }[] = [];
+    const manifestoChars: { el: HTMLSpanElement; brightness: number; original: string; glitchUntil: number; baseCX?: number; baseCY?: number }[] = [];
     const manifestoWrapEl = document.getElementById("manifesto-wrap") as HTMLElement;
     const manifestoEl = document.getElementById("manifesto") as HTMLElement;
+    const manifestoEmailEl = document.getElementById("manifesto-email") as HTMLElement;
     buildChars(MANIFESTO_TEXT, manifestoEl, manifestoChars);
 
     const ILLUMINATE_RADIUS = 180;
@@ -64,8 +66,36 @@ export default function Home() {
     let isMouseDown = false;
     let isTouchDevice = false;
 
-    // Scroll/swipe-up dispersal: 0 = full field, 1 = blank screen
-    let disperse = 0, disperseTarget = 0;
+    // Scroll/swipe progress: 0..1 disperses the field & reveals the manifesto,
+    // 1..2 scatters the manifesto itself on the wind.
+    let prog = 0, progTarget = 0;
+    let manifestoBaseCaptured = false;
+
+    // Stage gate: a single big scroll can't blow through both stages. Once the
+    // field is dispersed and the manifesto is settled, scattering it needs a
+    // fresh, deliberate gesture — a single fling (and its momentum) won't carry
+    // over, because momentum events fall inside one gesture, not a new one.
+    const GESTURE_GAP = 150;      // ms of quiet that marks a new scroll/swipe
+    let lastInputT = -9999;
+    let stageTwoUnlocked = false;
+
+    const gateProgress = (deltaProg: number, tStamp: number) => {
+      const isNewGesture = tStamp - lastInputT > GESTURE_GAP;
+      lastInputT = tStamp;
+
+      // Re-arm the lock once we've eased back down out of the manifesto stage
+      if (progTarget < 0.9) stageTwoUnlocked = false;
+
+      // Unlock stage two on a deliberate fresh forward gesture, once stage one
+      // has fully settled. Identical on every visit — no persistent timing state.
+      if (isNewGesture && deltaProg > 0 && !stageTwoUnlocked &&
+          progTarget > 0.985 && prog > 0.97) {
+        stageTwoUnlocked = true;
+      }
+
+      const cap = stageTwoUnlocked ? 2 : 1;
+      progTarget = Math.max(0, Math.min(cap, progTarget + deltaProg));
+    };
 
     const onMouseMove = (e: MouseEvent) => {
       if (isTouchDevice) return;
@@ -90,6 +120,7 @@ export default function Home() {
     const onTouchStart = (e: TouchEvent) => {
       isTouchDevice = true;
       isMouseDown = true;
+      lastInputT = -9999; // each finger-down begins a fresh gesture for the gate
       const t = e.touches[0];
       prevMouseX = mouseX = t.clientX;
       prevMouseY = mouseY = t.clientY;
@@ -100,7 +131,7 @@ export default function Home() {
       mouseX = t.clientX; mouseY = t.clientY;
       mouseVX = mouseX - prevMouseX; mouseVY = mouseY - prevMouseY;
       // Swipe up disperses, swipe down restores
-      disperseTarget = Math.max(0, Math.min(1, disperseTarget - mouseVY * 0.005));
+      gateProgress(-mouseVY * 0.005, e.timeStamp);
     };
     const onTouchEnd = () => {
       isMouseDown = false;
@@ -109,7 +140,7 @@ export default function Home() {
 
     const onWheel = (e: WheelEvent) => {
       // Scroll up disperses, scroll down restores
-      disperseTarget = Math.max(0, Math.min(1, disperseTarget - e.deltaY * 0.0014));
+      gateProgress(-e.deltaY * 0.0014, e.timeStamp);
     };
 
     document.addEventListener("wheel", onWheel, { passive: true });
@@ -160,7 +191,7 @@ export default function Home() {
 
     // Preload logo
     const logoImg = new Image();
-    logoImg.src = "/Black-and-White-Logo-1.png";
+    logoImg.src = "/asunder-wordmark.png";
 
     // Canvas
     const canvas = document.getElementById("particle-canvas") as HTMLCanvasElement;
@@ -248,8 +279,8 @@ export default function Home() {
       off.width = W; off.height = H;
       const octx = off.getContext("2d")!;
 
-      // Scale logo: square dropcap, smaller than old wide wordmark
-      const targetW = IS_MOBILE ? Math.min(W * 0.58, 260) : Math.min(W * 0.26, 320);
+      // Scale logo: wide wordmark
+      const targetW = IS_MOBILE ? Math.min(W * 0.82, 360) : Math.min(W * 0.184, 240);
       const aspect = logoImg.naturalHeight / logoImg.naturalWidth;
       const logoH = targetW * aspect;
       const lx = (W - targetW) / 2;
@@ -257,26 +288,49 @@ export default function Home() {
       const ly = (H - BAR_OFFSET) / 2 - logoH / 2;
       document.documentElement.style.setProperty("--logo-half-h", `${logoH / 2}px`);
 
+      // The visible wordmark sits exactly where the mask is drawn, so the
+      // particle moat hugs the real letters.
+      wordmarkImgEl.style.left = `${lx}px`;
+      wordmarkImgEl.style.top = `${ly}px`;
+      wordmarkImgEl.style.width = `${targetW}px`;
+      wordmarkImgEl.style.height = `${logoH}px`;
+
       // Draw logo into mask canvas
       octx.drawImage(logoImg, lx, ly, targetW, logoH);
 
-      // Detect if image is opaque (white bg) by sampling alpha from raw draw
       const rawData = octx.getImageData(0, 0, W, H).data;
-      let totalAlpha = 0;
-      const sampleCount = Math.min(W * H, 4000);
-      const sampleStep = Math.floor(W * H / sampleCount);
-      for (let i = 0; i < sampleCount; i++) totalAlpha += rawData[i * sampleStep * 4 + 3];
-      const isOpaqueImage = (totalAlpha / sampleCount) > 240;
+
+      // Sample the corners of the drawn logo box to learn its background.
+      // A transparent-background logo (corners ~empty) keys off alpha; a
+      // solid-background logo keys off luminance, so white-on-dark or
+      // dark-on-white both resolve to "letters = inside, field = outside".
+      const corners = [
+        [lx + 3, ly + 3], [lx + targetW - 3, ly + 3],
+        [lx + 3, ly + logoH - 3], [lx + targetW - 3, ly + logoH - 3],
+      ];
+      let cornerAlpha = 0, cornerLum = 0;
+      for (const [px, py] of corners) {
+        const cxp = Math.max(0, Math.min(W - 1, Math.round(px)));
+        const cyp = Math.max(0, Math.min(H - 1, Math.round(py)));
+        const k = (cyp * W + cxp) * 4;
+        cornerAlpha += rawData[k + 3];
+        cornerLum += 0.299 * rawData[k] + 0.587 * rawData[k + 1] + 0.114 * rawData[k + 2];
+      }
+      cornerAlpha /= corners.length;
+      cornerLum /= corners.length;
+      const solidBg = cornerAlpha > 200;
 
       textW = W; textH = H;
       textMask = new Uint8Array(W * H);
 
-      if (isOpaqueImage) {
-        // White background image: use inverted luminance directly. Skip blob pipeline.
+      if (solidBg) {
+        // Solid-background logo: distance from the background colour. Letters of
+        // either polarity stand out; the flat background reads as empty field.
         for (let i = 0; i < W * H; i++) {
+          if (rawData[i * 4 + 3] < 40) { textMask[i] = 0; continue; }
           const r = rawData[i * 4], g = rawData[i * 4 + 1], b = rawData[i * 4 + 2];
           const lum = 0.299 * r + 0.587 * g + 0.114 * b;
-          textMask[i] = Math.round(255 - lum);
+          textMask[i] = Math.min(255, Math.round(Math.abs(lum - cornerLum) * 1.6));
         }
       } else {
         // Transparent image: light 1px blur to smooth pixel edges, preserve fine detail
@@ -412,7 +466,9 @@ export default function Home() {
       const t = time * WARP_SPEED;
       const st = time * SIZE_SPEED;
 
-      disperse += (disperseTarget - disperse) * 0.08;
+      prog += (progTarget - prog) * 0.08;
+      const disperse = Math.min(1, prog);
+      const manifestoDisperse = Math.max(0, prog - 1);
       const DISPERSE_DIST = Math.max(W, H) * 1.25;
       const disperseActive = disperse > 0.001;
       // Subcopy clears out over the first 40% of the dispersal
@@ -421,6 +477,23 @@ export default function Home() {
       // Manifesto fades in only after the subcopy is gone
       const manifestoFade = Math.max(0, Math.min(1, (disperse - 0.5) / 0.4));
       manifestoWrapEl.style.opacity = String(manifestoFade);
+      const blowing = manifestoDisperse > 0.001;
+      // Email is the final reveal: it fades in dead-centre only as the manifesto explodes
+      const emailReveal = Math.max(0, Math.min(1, (manifestoDisperse - 0.15) / 0.5));
+      manifestoEmailEl.style.opacity = String(emailReveal);
+      manifestoEmailEl.style.pointerEvents = emailReveal > 0.5 ? "auto" : "none";
+
+      // Snapshot each letter's home position once the manifesto is fully formed,
+      // so the blow-away pushes from a stable origin without per-frame layout reads.
+      if (manifestoFade > 0.99 && !blowing && !manifestoBaseCaptured) {
+        for (const ch of manifestoChars) {
+          const r = ch.el.getBoundingClientRect();
+          ch.baseCX = r.left + r.width * 0.5;
+          ch.baseCY = r.top + r.height * 0.5;
+        }
+        manifestoBaseCaptured = true;
+      }
+
       if (manifestoFade > 0.01) {
         for (const ch of manifestoChars) {
           // Slow glitch swaps
@@ -430,6 +503,28 @@ export default function Home() {
           } else if (ch.glitchUntil > 0 && time >= ch.glitchUntil) {
             ch.glitchUntil = 0;
             ch.el.textContent = ch.original;
+          }
+
+          // Stage two — the manifesto itself scatters on the wind
+          if (blowing && ch.baseCX !== undefined) {
+            const dirx = ch.baseCX - W * 0.5, diry = ch.baseCY! - H * 0.5;
+            const dd = Math.sqrt(dirx * dirx + diry * diry) || 1;
+            // Swirl each letter's flight angle so it scatters rather than splits
+            const turb = noise2D(ch.baseCX * 0.03, ch.baseCY! * 0.03) * 0.9;
+            const cs = Math.cos(turb), sn = Math.sin(turb);
+            const ux = (dirx / dd) * cs - (diry / dd) * sn;
+            const uy = (dirx / dd) * sn + (diry / dd) * cs;
+            const dvar = 0.55 + (noise2D(ch.baseCX * 0.01, ch.baseCY! * 0.01) + 1) * 0.5;
+            const push = manifestoDisperse * manifestoDisperse * DISPERSE_DIST * dvar * 0.55;
+            const rot = noise2D(ch.baseCX * 0.05, ch.baseCY! * 0.05) * 50 * manifestoDisperse;
+            const lift = 30 * manifestoDisperse;
+            ch.el.style.transform = `translate(${ux * push}px, ${uy * push - lift}px) rotate(${rot}deg)`;
+            ch.el.style.opacity = String(Math.max(0, 1 - manifestoDisperse * 1.25));
+            continue;
+          } else if (manifestoBaseCaptured && ch.el.style.transform) {
+            // Settled back below stage two — drop the blow-away transform
+            ch.el.style.transform = "";
+            ch.el.style.opacity = "";
           }
 
           // Cursor reveal: chars near the cursor go pure white
@@ -455,30 +550,21 @@ export default function Home() {
         }
       }
 
-      // Wordmark wave: starts immediately
-      const waveT = Math.min(elapsed / WAVE_DURATION, 1);
-      const waveEaseOut = 1 - Math.pow(1 - waveT, 2.5);
-      const waveFront = 1.3 - waveEaseOut * 1.6;
-
       // Background wave: delayed until wordmark is established
       const BG_WAVE_DELAY = 800;
       const bgWaveT = Math.min(Math.max(0, elapsed - BG_WAVE_DELAY) / WAVE_DURATION, 1);
       const bgWaveEaseOut = 1 - Math.pow(1 - bgWaveT, 2.5);
       const bgWaveFront = 1.3 - bgWaveEaseOut * 1.6;
 
-      // Intro: background moat expands, logo fades in immediately
+      // Intro: background moat expands, wordmark fades in immediately
       const INTRO_DURATION = 1500;
       const introT = Math.min(1, elapsed / INTRO_DURATION);
       const introEase = 1 - Math.pow(1 - introT, 3);
       const logoFadeT = Math.max(0, Math.min(1, elapsed / 700));
       const logoFadeEase = 1 - Math.pow(1 - logoFadeT, 2.5);
 
-      // Detail reveal: thick A strokes first (-6 = 6px from any edge), then floral detail eases in
-      const DETAIL_START = 800;
-      const DETAIL_DURATION = 2400;
-      const detailT = Math.max(0, Math.min(1, (elapsed - DETAIL_START) / DETAIL_DURATION));
-      const detailEase = 1 - Math.pow(1 - detailT, 2.5);
-      const detailCutoff = -6 * (1 - detailEase); // -6 → 0
+      // Wordmark: fade in on load, fade out as the field disperses
+      wordmarkImgEl.style.opacity = String(logoFadeEase * Math.max(0, 1 - disperse / 0.5));
 
       const warpMult = elapsed > 400 ? Math.min(1, (elapsed - 400) / 1500) : 0;
 
@@ -663,115 +749,6 @@ export default function Home() {
         }
       }
 
-      // ── Logo interior: dense dot fill ──
-      const LOGO_SPACING = IS_MOBILE ? 2.5 : 3;
-      const logoCols = Math.ceil(W / LOGO_SPACING);
-      const logoRows = Math.ceil(H / LOGO_SPACING);
-      for (let row = 0; row < logoRows; row++) {
-        for (let col = 0; col < logoCols; col++) {
-          const bx = col * LOGO_SPACING;
-          const by = row * LOGO_SPACING;
-
-          // Only draw inside the logo mask
-          if (logoFadeEase < 0.01) continue;
-          const distHere = textDistAt(bx, by);
-          if (distHere >= 0) continue;
-          if (distHere > detailCutoff) continue;
-
-          // Slight noise warp so it breathes
-          const lnx = bx * 0.008, lny = by * 0.008;
-          const lwarp = noise2D(lnx + t * 0.5, lny + t * 0.3) * LOGO_SPACING * 0.6;
-          const lwarpY = noise2D(lnx + 100 + t * 0.4, lny + 100 + t * 0.25) * LOGO_SPACING * 0.6;
-          const fx = bx + lwarp;
-          const fy = by + lwarpY;
-
-          // Skip if warped outside logo
-          if (textDistAt(fx, fy) > detailCutoff) continue;
-
-          // Cursor interaction: organic amoeba boundary sampled in polar space
-          const cdx2 = fx - mouseX, cdy2 = fy - mouseY;
-          const cDist2 = Math.sqrt(cdx2 * cdx2 + cdy2 * cdy2);
-          let logoCI = 0;
-          // Map angle to a circle in noise-space so boundary is always seamlessly closed
-          const angle2 = Math.atan2(cdy2, cdx2);
-          const nCircleR = 1.8;
-          const nCx = Math.cos(angle2) * nCircleR, nCy = Math.sin(angle2) * nCircleR;
-          const blob1 = noise2D(nCx + t * 0.28, nCy + t * 0.21);
-          const blob2 = noise2D(nCx * 0.5 + 40 + t * 0.17, nCy * 0.5 + 40 + t * 0.13);
-          const blobNoise = blob1 * 0.65 + blob2 * 0.35;
-          const logoEffectR = CURSOR_RADIUS * (1.45 + blobNoise * 0.55);
-          if (cDist2 < logoEffectR && cDist2 > 0) {
-            const f = Math.max(0, 1 - cDist2 / logoEffectR);
-            logoCI = f * f * f * f;
-          }
-
-          const logoRadius = 0.8 + logoCI * 0.4;
-
-          const logoOpNoise = (noise2D(bx * 0.003 + opT, by * 0.003 + opT * 0.7) + 1) * 0.5;
-          let logoOpacity = (0.7 + logoOpNoise * 0.3) * logoFadeEase;
-
-          // Wave reveal
-          if (elapsed < WAVE_DURATION + 600) {
-            let dotNorm: number, waveNoise: number;
-            if (MODE.waveDir === "top") {
-              dotNorm = by / H;
-              waveNoise = noise2D(bx * 0.006, 42) * 0.06;
-            } else if (MODE.waveDir === "center") {
-              const cx = (bx - W * 0.5) / (W * 0.5);
-              const cy = (by - H * 0.5) / (H * 0.5);
-              dotNorm = Math.sqrt(cx * cx + cy * cy);
-              waveNoise = noise2D(bx * 0.004 + by * 0.004, 42) * 0.06;
-            } else {
-              dotNorm = bx / W;
-              waveNoise = noise2D(by * 0.006, 42) * 0.06;
-            }
-            const distPastWave = (dotNorm + waveNoise) - waveFront;
-            const waveAlpha = Math.max(0, Math.min(1, distPastWave / WAVE_FEATHER));
-            logoOpacity *= waveAlpha;
-            if (waveAlpha < 0.01) continue;
-          }
-
-          // Brighter than background dots, with the cool tint
-          const lBright = 0.85 + logoOpNoise * 0.15;
-          const lr = Math.floor(lBright * 255 * MODE.tint[0]);
-          const lg = Math.floor(lBright * 255 * MODE.tint[1]);
-          const lb = Math.floor(lBright * 255 * MODE.tint[2]);
-
-          // Under cursor: chaotic radiation decay outward from cursor
-          if (logoCI > 0.05) {
-            const distNorm = 1 - logoCI; // 0 at center, ~1 at edge
-            // Per-dot random seed for chaos
-            const seed = (col * 7919 + row * 104729) >>> 0;
-            const r1 = (seed & 0xffff) / 0xffff;
-            const r2 = ((seed >> 8) & 0xffff) / 0xffff;
-            // Multiple overlapping noise frequencies for erratic flicker
-            const n1 = noise2D(bx * 0.04 + time * 0.008, by * 0.04 + r1 * 50);
-            const n2 = noise2D(bx * 0.1 + time * 0.015 + 300, by * 0.1 + r2 * 80);
-            const flicker = n1 * 0.6 + n2 * 0.4; // -1 to 1
-            // More likely to vanish near center, falls off with distance
-            const killChance = logoCI * 0.85;
-            if (flicker < killChance * 2 - 1 + distNorm * 0.8) continue;
-          }
-
-          let drawX = fx, drawY = fy;
-          if (disperseActive) {
-            const ddx = bx - W * 0.5, ddy = by - H * 0.5;
-            const dd = Math.sqrt(ddx * ddx + ddy * ddy) || 1;
-            const dvar = 0.6 + (noise2D(bx * 0.01, by * 0.01) + 1) * 0.45;
-            const push = disperse * disperse * DISPERSE_DIST * dvar;
-            drawX += (ddx / dd) * push;
-            drawY += (ddy / dd) * push;
-            logoOpacity *= 1 - disperse;
-            if (logoOpacity < 0.01) continue;
-          }
-
-          ctx.fillStyle = `rgba(${lr},${lg},${lb},${logoOpacity})`;
-          ctx.beginPath();
-          ctx.arc(drawX, drawY, logoRadius, 0, Math.PI * 2);
-          ctx.fill();
-        }
-      }
-
       if (elapsed > 750 && !isTouchDevice) {
         for (let i = 0; i < descriptorChars.length; i++) {
             const ch = descriptorChars[i];
@@ -831,7 +808,7 @@ export default function Home() {
       setTimeout(startAfterFont, 800);
     }
 
-    const onResize = () => { fullInit(); };
+    const onResize = () => { fullInit(); manifestoBaseCaptured = false; };
     window.addEventListener("resize", onResize);
 
     return () => {
@@ -862,6 +839,9 @@ export default function Home() {
 
       <canvas id="particle-canvas" />
 
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img id="wordmark-img" className="wordmark-img" src="/asunder-wordmark.png" alt="Asunder" />
+
       <section className="hero-section">
         <div id="wordmark-wrap" className="wordmark-wrap">
           <div className="studio-descriptor" id="studio-descriptor" />
@@ -870,11 +850,8 @@ export default function Home() {
 
       <div className="manifesto" id="manifesto-wrap">
         <p className="manifesto-text" id="manifesto" />
+        <a className="manifesto-email" id="manifesto-email" href="mailto:make@asunder.com">make@asunder.com</a>
       </div>
-
-      <footer className="sticky-email">
-        <a href="mailto:hello@asunder.studio">hello@asunder.studio</a>
-      </footer>
 
       <div className="cursor-dot" id="cursor-dot" />
       <div className="cursor-ring" id="cursor-ring" />

@@ -2,7 +2,7 @@
 @tailwind components;
 @tailwind utilities;
 
-@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=Space+Mono:wght@400;700&family=Nunito:wght@900&family=UnifrakturMaguntia&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=Space+Mono:wght@400;700&family=Nunito:wght@900&family=EB+Garamond:ital,wght@0,400;0,500;1,400&family=UnifrakturMaguntia&display=swap');
 
 @font-face {
   font-family: 'Alagard';
@@ -74,13 +74,14 @@ canvas#particle-canvas {
   text-align: center;
   margin-top: calc(var(--logo-half-h, 160px) + 36px);
   pointer-events: none;
-  font-size: clamp(0.7rem, 1.15vw, 0.9rem);
-  font-family: 'Space Mono', monospace;
+  font-size: clamp(0.455rem, 0.748vw, 0.585rem);
+  font-family: 'EB Garamond', Georgia, serif;
   font-weight: 400;
   letter-spacing: 0.18em;
   text-transform: uppercase;
   user-select: none;
   line-height: 1.4;
+  text-wrap: balance;
 }
 
 .studio-descriptor .word {
@@ -100,13 +101,32 @@ canvas#particle-canvas {
   pointer-events: none;
 }
 
+.manifesto-email {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  opacity: 0;
+  pointer-events: none;
+  font-family: 'EB Garamond', Georgia, serif;
+  font-size: clamp(0.6rem, 1vw, 0.85rem);
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: rgba(232, 232, 228, 0.8);
+  text-decoration: none;
+  transition: color 0.25s ease;
+}
+.manifesto-email:hover {
+  color: #fff;
+}
+
 .manifesto-text {
-  font-family: 'Space Mono', monospace;
+  font-family: 'EB Garamond', Georgia, serif;
   font-weight: 400;
-  color: rgba(225, 225, 225, 0.82);
-  font-size: clamp(0.7rem, 1.15vw, 0.9rem);
-  letter-spacing: 0.02em;
-  line-height: 1.85;
+  color: rgba(232, 232, 228, 0.9);
+  font-size: clamp(0.475rem, 0.825vw, 0.65rem);
+  letter-spacing: 0.06em;
+  line-height: 1.7;
   text-align: center;
   text-transform: uppercase;
   max-width: 720px;
@@ -127,7 +147,8 @@ canvas#particle-canvas {
 
 @media (max-width: 767px) {
   .manifesto { padding: 12vw 8vw; }
-  .manifesto-text { font-size: 0.75rem; line-height: 1.8; letter-spacing: 0.01em; }
+  .manifesto-text { font-size: 0.71rem; line-height: 1.55; letter-spacing: 0.05em; }
+  .manifesto-email { font-size: 0.9rem; }
 }
 
 .studio-descriptor .char {
@@ -142,9 +163,18 @@ canvas#particle-canvas {
 
 @media (hover: none) and (pointer: coarse) {
   .studio-descriptor .char {
-    color: rgba(120, 120, 120, 1.0) !important;
+    color: rgba(255, 255, 255, 1.0) !important;
     transition: none;
   }
+}
+
+.wordmark-img {
+  position: fixed;
+  z-index: 4;
+  pointer-events: none;
+  user-select: none;
+  opacity: 0;
+  will-change: opacity;
 }
 
 .wordmark-wrap {
@@ -188,7 +218,7 @@ canvas#particle-canvas {
 @media (max-width: 768px) {
   body { cursor: auto; }
   .cursor-dot, .cursor-ring { display: none; }
-  .studio-descriptor { font-size: 0.75rem; letter-spacing: 0.14em; }
+  .studio-descriptor { font-size: 0.73rem; letter-spacing: 0.14em; }
 }
 
 @media (hover: none) and (pointer: coarse) {
@@ -215,35 +245,6 @@ canvas#particle-canvas {
   display: flex;
   flex-direction: column;
   align-items: center;
-}
-
-/* ── Sticky email footer ── */
-.sticky-email {
-  position: fixed;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  z-index: 50;
-  padding: 18px 28px;
-  display: flex;
-  justify-content: center;
-  pointer-events: none;
-  background: linear-gradient(to top, rgba(10, 10, 10, 0.85), rgba(10, 10, 10, 0));
-  backdrop-filter: blur(4px);
-  -webkit-backdrop-filter: blur(4px);
-}
-.sticky-email a {
-  pointer-events: auto;
-  font-family: 'Space Mono', monospace;
-  font-size: clamp(0.65rem, 0.85vw, 0.78rem);
-  letter-spacing: 0.22em;
-  text-transform: lowercase;
-  color: rgba(255, 255, 255, 0.7);
-  text-decoration: none;
-  transition: color 0.25s ease;
-}
-.sticky-email a:hover {
-  color: #fff;
 }
 
 /* ── Grain texture ── */
