@@ -850,7 +850,7 @@ export default function Home() {
 
       <div className="manifesto" id="manifesto-wrap">
         <p className="manifesto-text" id="manifesto" />
-        <a className="manifesto-email" id="manifesto-email" href="mailto:make@asunder.com">make@asunder.com</a>
+        <a className="manifesto-email" id="manifesto-email" href="mailto:make@asunder.studio">make@asunder.studio</a>
       </div>
 
       <div className="cursor-dot" id="cursor-dot" />
